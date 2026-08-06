@@ -2,31 +2,89 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
+    protected $primaryKey = 'user_id';
+
+    protected $fillable = [
+        'role_id',
+        'school_id',
+        'first_name',
+        'last_name',
+        'email',
+        'password_hash',
+        'phone_number',
+        'account_status',
+    ];
+
+    protected $hidden = [
+        'password_hash',
+    ];
+
+    public function getAuthPassword()
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->password_hash;
+    }
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class, 'role_id', 'role_id');
+    }
+
+    public function libraryCard()
+    {
+        return $this->hasOne(LibraryCard::class, 'user_id', 'user_id');
+    }
+
+    public function borrowTransactions()
+    {
+        return $this->hasMany(BorrowTransaction::class, 'user_id', 'user_id');
+    }
+
+    public function reservations()
+    {
+        return $this->hasMany(Reservation::class, 'user_id', 'user_id');
+    }
+
+    public function attendanceLogs()
+    {
+        return $this->hasMany(AttendanceLog::class, 'user_id', 'user_id');
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class, 'user_id', 'user_id');
+    }
+
+    public function favorites()
+    {
+        return $this->hasMany(Favorite::class, 'user_id', 'user_id');
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->role && $this->role->role_name === 'Super Admin';
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role && in_array($this->role->role_name, ['Super Admin', 'Admin']);
+    }
+
+    public function isLibrarian(): bool
+    {
+        return $this->role && in_array($this->role->role_name, ['Super Admin', 'Admin', 'Librarian']);
+    }
+
+    public function isMember(): bool
+    {
+        return $this->role && $this->role->role_name === 'Member';
     }
 }

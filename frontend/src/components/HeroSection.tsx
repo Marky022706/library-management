@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Container } from './ui/Container';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
@@ -16,7 +17,7 @@ export const HeroSection: React.FC = () => {
         color: '#ffffff',
       }}
     >
-      {/* Blurred Background Image Layer */}
+      {/* Background Image Layers */}
       <div
         style={{
           position: 'absolute',
@@ -27,8 +28,25 @@ export const HeroSection: React.FC = () => {
           backgroundImage: `url('/library-hero-bg.jpg')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          filter: 'blur(8px)',
-          transform: 'scale(1.08)',
+          filter: 'blur(6px)',
+          transform: 'scale(1.06)',
+          zIndex: 0,
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundImage: `url('/library-hero-bg.jpg')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center right',
+          clipPath: 'polygon(48% 0, 100% 0, 100% 100%, 58% 100%)',
+          filter: 'blur(0.25px)',
+          transform: 'scale(1.015)',
+          opacity: 1,
           zIndex: 0,
         }}
       />
@@ -82,7 +100,7 @@ export const HeroSection: React.FC = () => {
                 letterSpacing: '-0.03em',
               }}
             >
-              Borrow. Read. Grow. — <span style={{ color: '#86efac' }}>All in One Place</span>
+              Borrow. Read. Grow.  <span style={{ color: '#86efac' }}>All in One Place</span>
             </h1>
           </ScrollReveal>
 
@@ -91,7 +109,7 @@ export const HeroSection: React.FC = () => {
               style={{
                 fontSize: '1.2rem',
                 color: '#f8fafc',
-                opacity: 0.95,
+                opacity: 15,
                 lineHeight: 1.65,
                 maxWidth: '640px',
               }}
@@ -110,12 +128,14 @@ export const HeroSection: React.FC = () => {
                 paddingTop: '0.5rem',
               }}
             >
-              <Button variant="primary" size="lg" asAnchor href="#register">
-                Get Started
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </Button>
+              <Link to="/register" style={{ textDecoration: 'none' }}>
+                <Button variant="primary" size="lg">
+                  Get Started
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </Button>
+              </Link>
             </div>
           </ScrollReveal>
 
@@ -156,3 +176,9 @@ export const HeroSection: React.FC = () => {
     </section>
   );
 };
+
+
+
+
+
+

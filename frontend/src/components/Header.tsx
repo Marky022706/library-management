@@ -1,31 +1,27 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Container } from './ui/Container';
 import { Button } from './ui/Button';
 
+const navItems = [
+  { name: 'HOME', href: '#home' },
+  { name: 'SERVICES', href: '#catalog' },
+  { name: 'HOW TO ACCESS', href: '#how-it-works' },
+  { name: 'ABOUT US', href: '#about' },
+  { name: 'CONTACT US', href: '#contact' },
+];
 export const Header: React.FC = () => {
   const [activeTab, setActiveTab] = useState('HOME');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const navItems = [
-    { name: 'HOME', href: '#home' },
-    { name: 'SERVICES', href: '#catalog' },
-    { name: 'HOW TO ACCESS', href: '#how-it-works' },
-    { name: 'ABOUT US', href: '#about' },
-    { name: 'CONTACT US', href: '#contact' },
-  ];
-
-  // Scroll spy effect to update active tab based on scroll position
   useEffect(() => {
     const handleScroll = () => {
-      const scrollPosition = window.scrollY + 100; // Offset for header height
-
-      // Find which section is currently in view
+      const scrollPosition = window.scrollY + 100;
       for (const item of navItems) {
         const section = document.querySelector(item.href) as HTMLElement;
         if (section) {
           const sectionTop = section.offsetTop;
           const sectionHeight = section.offsetHeight;
-          
           if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
             setActiveTab(item.name);
             break;
@@ -33,14 +29,8 @@ export const Header: React.FC = () => {
         }
       }
     };
-
-    // Initial check
     handleScroll();
-
-    // Add scroll listener
     window.addEventListener('scroll', handleScroll, { passive: true });
-
-    // Cleanup
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -161,13 +151,16 @@ export const Header: React.FC = () => {
 
           {/* Right: Auth Buttons & Hamburger Toggle */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-            <Button variant="outline" size="md" asAnchor href="#login">
-              Sign In
-            </Button>
-            <Button variant="primary" size="md" asAnchor href="#register">
-              Create Account
-            </Button>
-
+            <Link to="/login" style={{ textDecoration: 'none' }}>
+              <Button variant="outline" size="md">
+                Sign In
+              </Button>
+            </Link>
+            <Link to="/register" style={{ textDecoration: 'none' }}>
+              <Button variant="primary" size="md">
+                Create Account
+              </Button>
+            </Link>
             {/* Mobile Hamburger Toggle */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -236,7 +229,19 @@ export const Header: React.FC = () => {
                 );
               })}
             </nav>
-          </div>
+
+            <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <Link to="/login" style={{ textDecoration: 'none' }} onClick={() => setIsMobileMenuOpen(false)}>
+                <Button variant="outline" size="md" style={{ width: '100%' }}>
+                  Sign In
+                </Button>
+              </Link>
+              <Link to="/register" style={{ textDecoration: 'none' }} onClick={() => setIsMobileMenuOpen(false)}>
+                <Button variant="primary" size="md" style={{ width: '100%' }}>
+                  Create Account
+                </Button>
+              </Link>
+            </div>          </div>
         )}
       </Container>
 
@@ -254,3 +259,6 @@ export const Header: React.FC = () => {
     </header>
   );
 };
+
+
+
