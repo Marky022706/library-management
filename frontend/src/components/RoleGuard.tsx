@@ -1,20 +1,21 @@
-import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import type { RoleName } from '../types';
+import type { ReactNode } from 'react';
+import type { UserRole } from '@/types';
+import { useAuth } from '@/hooks/useAuth';
 
-interface RoleGuardProps {
-  children: React.ReactNode;
-  allowedRoles: RoleName[];
+export interface RoleGuardProps {
+  role: UserRole | UserRole[];
+  children: ReactNode;
 }
 
-export const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) => {
-  const { user } = useAuth();
-  const currentRole = user?.role?.role_name;
+/** Restricts a single nested route (e.g. a Super Admin-only page) beyond the parent ProtectedRoute check. */
+export function RoleGuard({ role, children }: RoleGuardProps) {
+  const { currentUser } = useAuth();
+  const allowed = Array.isArray(role) ? role : [role];
 
-  if (!currentRole || !allowedRoles.includes(currentRole)) {
-    return <Navigate to="/dashboard" replace />;
+  if (!currentUser || !allowed.includes(currentUser.role)) {
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return <>{children}</>;
-};
+}

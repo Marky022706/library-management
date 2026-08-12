@@ -1,116 +1,58 @@
-import React from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { Loader2 } from 'lucide-react';
+import { cn } from '@/utils/cn';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'outline' | 'subtle';
-  size?: 'sm' | 'md' | 'lg';
-  children: React.ReactNode;
-  asAnchor?: boolean;
-  href?: string;
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success';
+export type ButtonSize = 'sm' | 'md' | 'lg';
+
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  isLoading?: boolean;
+  leftIcon?: ReactNode;
+  rightIcon?: ReactNode;
+  fullWidth?: boolean;
 }
 
-export const Button: React.FC<ButtonProps> = ({
-  variant = 'primary',
-  size = 'md',
-  children,
-  className = '',
-  asAnchor = false,
-  href,
-  style,
-  ...props
-}) => {
-  const getStyles = (): React.CSSProperties => {
-    const base: React.CSSProperties = {
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '0.5rem',
-      fontWeight: 600,
-      borderRadius: 'var(--radius-md)',
-      transition: 'all var(--transition-fast)',
-      textDecoration: 'none',
-      cursor: 'pointer',
-      fontSize: size === 'sm' ? '0.875rem' : size === 'lg' ? '1.125rem' : '1rem',
-      padding: size === 'sm' ? '0.5rem 1rem' : size === 'lg' ? '0.875rem 1.75rem' : '0.625rem 1.25rem',
-    };
-
-    if (variant === 'primary') {
-      return {
-        ...base,
-        backgroundColor: 'var(--color-primary)',
-        color: '#ffffff',
-        border: '1px solid var(--color-primary)',
-        boxShadow: 'var(--shadow-sm)',
-        ...style,
-      };
-    }
-
-    if (variant === 'outline') {
-      return {
-        ...base,
-        backgroundColor: 'transparent',
-        color: 'var(--color-primary)',
-        border: '1.5px solid var(--color-primary)',
-        ...style,
-      };
-    }
-
-    // Subtle variant
-    return {
-      ...base,
-      backgroundColor: 'transparent',
-      color: 'var(--color-neutral-dark)',
-      border: '1.5px solid var(--color-soft-gray-border)',
-      ...style,
-    };
-  };
-
-  const handleMouseEnter = (e: React.MouseEvent<HTMLElement>) => {
-    const target = e.currentTarget;
-    if (variant === 'primary') {
-      target.style.backgroundColor = 'var(--color-primary-hover)';
-      target.style.borderColor = 'var(--color-primary-hover)';
-    } else if (variant === 'outline') {
-      target.style.backgroundColor = 'var(--color-soft-gray-bg)';
-    } else {
-      target.style.backgroundColor = 'var(--color-soft-gray-border)';
-    }
-  };
-
-  const handleMouseLeave = (e: React.MouseEvent<HTMLElement>) => {
-    const target = e.currentTarget;
-    if (variant === 'primary') {
-      target.style.backgroundColor = 'var(--color-primary)';
-      target.style.borderColor = 'var(--color-primary)';
-    } else if (variant === 'outline') {
-      target.style.backgroundColor = 'transparent';
-    } else {
-      target.style.backgroundColor = 'transparent';
-    }
-  };
-
-  if (asAnchor && href) {
-    return (
-      <a
-        href={href}
-        style={getStyles()}
-        className={`btn btn-${variant} ${className}`}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
-        {children}
-      </a>
-    );
-  }
-
-  return (
-    <button
-      style={getStyles()}
-      className={`btn btn-${variant} ${className}`}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      {...props}
-    >
-      {children}
-    </button>
-  );
+const VARIANT_CLASSES: Record<ButtonVariant, string> = {
+  primary: 'bg-primary-600 text-white hover:bg-primary-700 focus-visible:outline-primary-600 disabled:hover:bg-primary-600',
+  secondary: 'bg-primary-50 text-primary-700 hover:bg-primary-100 focus-visible:outline-primary-600',
+  outline: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus-visible:outline-primary-600',
+  ghost: 'bg-transparent text-gray-600 hover:bg-gray-100 focus-visible:outline-primary-600',
+  danger: 'bg-red-600 text-white hover:bg-red-700 focus-visible:outline-red-600 disabled:hover:bg-red-600',
+  success: 'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:outline-emerald-600',
 };
+
+const SIZE_CLASSES: Record<ButtonSize, string> = {
+  sm: 'h-8 px-3 text-sm gap-1.5',
+  md: 'h-10 px-4 text-sm gap-2',
+  lg: 'h-12 px-6 text-base gap-2',
+};
+
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  (
+    { className, variant = 'primary', size = 'md', isLoading = false, leftIcon, rightIcon, fullWidth, disabled, children, ...props },
+    ref,
+  ) => {
+    return (
+      <button
+        ref={ref}
+        className={cn(
+          'inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60',
+          VARIANT_CLASSES[variant],
+          SIZE_CLASSES[size],
+          fullWidth && 'w-full',
+          className,
+        )}
+        disabled={disabled || isLoading}
+        {...props}
+      >
+        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : leftIcon}
+        {children}
+        {!isLoading && rightIcon}
+      </button>
+    );
+  },
+);
+
+Button.displayName = 'Button';
