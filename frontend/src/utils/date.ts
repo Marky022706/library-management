@@ -1,87 +1,64 @@
-/** Date helpers used throughout the frontend prototype. All dates are stored as ISO 8601 strings. */
+/**
+ * All "today" logic in this mock app is pinned to a fixed reference date
+ * (matching the reference screenshots) rather than the real system clock, so
+ * the demo data doesn't go stale/empty when opened on a different real date.
+ */
+export const MOCK_TODAY = '2025-08-11';
 
-export function today(): Date {
-  return new Date();
+const dateFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
+
+const longDateFormatter = new Intl.DateTimeFormat('en-US', {
+  weekday: 'long',
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+});
+
+const monthFormatter = new Intl.DateTimeFormat('en-US', { month: 'short' });
+
+/** "2025-08-08" -> "Aug 8, 2025" */
+export function formatDate(iso: string): string {
+  return dateFormatter.format(new Date(`${iso}T00:00:00`));
 }
 
-export function isoDate(date: Date): string {
-  return date.toISOString();
+/** "2025-08-11" -> "Monday, August 11, 2025" */
+export function formatLongDate(iso: string): string {
+  return longDateFormatter.format(new Date(`${iso}T00:00:00`));
 }
 
-export function addDays(date: Date | string, days: number): Date {
-  const base = typeof date === 'string' ? new Date(date) : new Date(date.getTime());
-  base.setDate(base.getDate() + days);
-  return base;
+/** "2025-08-08" -> "Aug" */
+export function formatMonth(iso: string): string {
+  return monthFormatter.format(new Date(`${iso}T00:00:00`));
 }
 
-export function daysBetween(a: Date | string, b: Date | string): number {
-  const start = typeof a === 'string' ? new Date(a) : a;
-  const end = typeof b === 'string' ? new Date(b) : b;
-  const msPerDay = 1000 * 60 * 60 * 24;
-  return Math.round((end.getTime() - start.getTime()) / msPerDay);
+/** Minutes between two "HH:mm" times. */
+export function minutesBetween(timeIn: string, timeOut: string): number {
+  const [inH, inM] = timeIn.split(':').map(Number);
+  const [outH, outM] = timeOut.split(':').map(Number);
+  return outH * 60 + outM - (inH * 60 + inM);
 }
 
-export function formatDate(value: string | Date, options?: Intl.DateTimeFormatOptions): string {
-  const date = typeof value === 'string' ? new Date(value) : value;
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleDateString('en-US', options ?? { year: 'numeric', month: 'short', day: 'numeric' });
+/** 105 -> "1h 45m" */
+export function formatDuration(totalMinutes: number): string {
+  if (!Number.isFinite(totalMinutes) || totalMinutes <= 0) return '0m';
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = Math.round(totalMinutes % 60);
+  if (hours === 0) return `${minutes}m`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
 }
 
-export function formatDateTime(value: string | Date): string {
-  const date = typeof value === 'string' ? new Date(value) : value;
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+export function isBefore(isoA: string, isoB: string): boolean {
+  return isoA < isoB;
 }
 
-export function formatTime(value: string | Date): string {
-  const date = typeof value === 'string' ? new Date(value) : value;
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-}
-
-export function timeAgo(value: string | Date): string {
-  const date = typeof value === 'string' ? new Date(value) : value;
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
-
-  if (Math.abs(seconds) < 60) {
-    return rtf.format(-Math.round(seconds), 'second');
-  }
-
-  const units: Intl.RelativeTimeFormatUnit[] = ['minute', 'hour', 'day', 'week', 'month', 'year'];
-  const divisors = [60, 24, 7, 4.34524, 12];
-  let duration = seconds / 60;
-  let unit: Intl.RelativeTimeFormatUnit = 'minute';
-
-  for (let i = 0; i < divisors.length; i++) {
-    if (Math.abs(duration) < divisors[i]) {
-      unit = units[i];
-      break;
-    }
-    duration = duration / divisors[i];
-    unit = units[i + 1];
-  }
-
-  return rtf.format(-Math.round(duration), unit);
-}
-
-export function isPast(value: string | Date): boolean {
-  const date = typeof value === 'string' ? new Date(value) : value;
-  return date.getTime() < Date.now();
-}
-
-/** ISO string `n` days ago from now (negative `n` means `n` days in the future). Handy for mock data. */
-export function daysAgo(n: number): string {
-  return isoDate(addDays(new Date(), -n));
-}
-
-/** ISO string `n` days from now. Handy for mock data. */
-export function daysFromNow(n: number): string {
-  return isoDate(addDays(new Date(), n));
+/** Whole days from `fromIso` to `toIso` — negative when `toIso` is in the past. */
+export function daysBetween(fromIso: string, toIso: string): number {
+  const from = new Date(`${fromIso}T00:00:00`);
+  const to = new Date(`${toIso}T00:00:00`);
+  return Math.round((to.getTime() - from.getTime()) / 86_400_000);
 }

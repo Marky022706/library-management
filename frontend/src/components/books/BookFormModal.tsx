@@ -1,264 +1,103 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import type { Book, BookCondition, BookFormat, BookInput } from '@/types';
-import { Modal, Button, Input, Select, Textarea } from '@/components/ui';
+import { useEffect, useState } from 'react';
+import type { Book, BookCondition } from '../../types';
+import { Modal } from '../common/Modal';
+import { Button } from '../common/Button';
+import { Field, inputClasses } from '../common/Field';
 
-export interface BookFormModalProps {
-  isOpen: boolean;
+interface BookFormModalProps {
+  open: boolean;
+  book: Book | null;
   onClose: () => void;
-  /** Pass the book being edited, or omit/undefined to create a new book. */
-  initialBook?: Book;
-  onSubmit: (input: BookInput) => Promise<void>;
+  onSubmit: (values: Omit<Book, 'id' | 'available' | 'status'>, editingId?: string) => void;
 }
 
-interface FormState {
-  title: string;
-  author: string;
-  category: string;
-  publisher: string;
-  publicationYear: string;
-  accessionNumber: string;
-  isbn: string;
-  shelfLocation: string;
-  format: BookFormat;
-  quantity: string;
-  condition: BookCondition;
-  description: string;
-}
+const CONDITIONS: BookCondition[] = ['Excellent', 'Good', 'Fair', 'Worn'];
+const COVER_COLORS = ['#15803d', '#1d4ed8', '#b45309', '#7c2d12', '#be185d', '#334155'];
 
-const FORMAT_OPTIONS = [
-  { label: 'Hardcover', value: 'Hardcover' },
-  { label: 'Paperback', value: 'Paperback' },
-  { label: 'E-Book', value: 'E-Book' },
-  { label: 'Audiobook', value: 'Audiobook' },
-];
+const EMPTY_FORM = { title: '', author: '', category: '', isbn: '', quantity: '1', condition: 'Good' as BookCondition };
 
-const CONDITION_OPTIONS = [
-  { label: 'New', value: 'New' },
-  { label: 'Good', value: 'Good' },
-  { label: 'Fair', value: 'Fair' },
-  { label: 'Worn', value: 'Worn' },
-  { label: 'Damaged', value: 'Damaged' },
-];
-
-function emptyForm(): FormState {
-  return {
-    title: '',
-    author: '',
-    category: '',
-    publisher: '',
-    publicationYear: '',
-    accessionNumber: '',
-    isbn: '',
-    shelfLocation: '',
-    format: 'Paperback',
-    quantity: '1',
-    condition: 'Good',
-    description: '',
-  };
-}
-
-function formFromBook(book: Book): FormState {
-  return {
-    title: book.title,
-    author: book.author,
-    category: book.category,
-    publisher: book.publisher,
-    publicationYear: String(book.publicationYear),
-    accessionNumber: book.accessionNumber,
-    isbn: book.isbn,
-    shelfLocation: book.shelfLocation,
-    format: book.format,
-    quantity: String(book.quantity),
-    condition: book.condition,
-    description: book.description ?? '',
-  };
-}
-
-type FormErrors = Partial<Record<keyof FormState, string>>;
-
-const CURRENT_YEAR = new Date().getFullYear();
-
-function validate(form: FormState): FormErrors {
-  const errors: FormErrors = {};
-  if (!form.title.trim()) errors.title = 'Title is required.';
-  if (!form.author.trim()) errors.author = 'Author is required.';
-  if (!form.category.trim()) errors.category = 'Category is required.';
-  if (!form.publisher.trim()) errors.publisher = 'Publisher is required.';
-  if (!form.accessionNumber.trim()) errors.accessionNumber = 'Accession number is required.';
-  if (!form.isbn.trim()) errors.isbn = 'ISBN is required.';
-  if (!form.shelfLocation.trim()) errors.shelfLocation = 'Shelf location is required.';
-
-  const year = Number(form.publicationYear);
-  if (!form.publicationYear.trim() || !Number.isInteger(year) || year < 1450 || year > CURRENT_YEAR + 1) {
-    errors.publicationYear = `Enter a valid 4-digit year between 1450 and ${CURRENT_YEAR + 1}.`;
-  }
-
-  const quantity = Number(form.quantity);
-  if (!form.quantity.trim() || !Number.isInteger(quantity) || quantity <= 0) {
-    errors.quantity = 'Quantity must be a whole number greater than 0.';
-  }
-
-  return errors;
-}
-
-export function BookFormModal({ isOpen, onClose, initialBook, onSubmit }: BookFormModalProps) {
-  const [form, setForm] = useState<FormState>(() => (initialBook ? formFromBook(initialBook) : emptyForm()));
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export function BookFormModal({ open, book, onClose, onSubmit }: BookFormModalProps) {
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!isOpen) return;
-    setForm(initialBook ? formFromBook(initialBook) : emptyForm());
+    if (!open) return;
     setErrors({});
-  }, [isOpen, initialBook]);
+    setForm(
+      book
+        ? { title: book.title, author: book.author, category: book.category, isbn: book.isbn, quantity: String(book.quantity), condition: book.condition }
+        : EMPTY_FORM,
+    );
+  }, [open, book]);
 
-  function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
+  const set = (key: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    const nextErrors = validate(form);
+  const handleSubmit = () => {
+    const nextErrors: Record<string, string> = {};
+    if (!form.title.trim()) nextErrors.title = 'Title is required.';
+    if (!form.author.trim()) nextErrors.author = 'Author is required.';
+    if (!form.category.trim()) nextErrors.category = 'Category is required.';
+    if (!form.isbn.trim()) nextErrors.isbn = 'ISBN is required.';
+    const quantity = Number(form.quantity);
+    if (!Number.isInteger(quantity) || quantity < 1) nextErrors.quantity = 'Quantity must be at least 1.';
+
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    const input: BookInput = {
-      title: form.title.trim(),
-      author: form.author.trim(),
-      category: form.category.trim(),
-      publisher: form.publisher.trim(),
-      publicationYear: Number(form.publicationYear),
-      accessionNumber: form.accessionNumber.trim(),
-      isbn: form.isbn.trim(),
-      shelfLocation: form.shelfLocation.trim(),
-      format: form.format,
-      quantity: Number(form.quantity),
-      condition: form.condition,
-      description: form.description.trim() || undefined,
-      coverUrl: initialBook?.coverUrl,
-    };
-
-    setIsSubmitting(true);
-    try {
-      await onSubmit(input);
-    } catch {
-      // The caller is responsible for surfacing the error (e.g. via a toast).
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+    onSubmit(
+      {
+        title: form.title.trim(),
+        author: form.author.trim(),
+        category: form.category.trim(),
+        isbn: form.isbn.trim(),
+        quantity,
+        condition: form.condition,
+        coverColor: book?.coverColor ?? COVER_COLORS[Math.floor(Math.random() * COVER_COLORS.length)],
+      },
+      book?.id,
+    );
+  };
 
   return (
     <Modal
-      isOpen={isOpen}
+      open={open}
       onClose={onClose}
-      title={initialBook ? 'Edit Book' : 'Add Book'}
-      description={initialBook ? 'Update this title’s catalog details.' : 'Add a new title to the library catalog.'}
-      size="lg"
+      title={book ? 'Edit Book' : 'Add Book'}
       footer={
         <>
-          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+          <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" form="book-form" isLoading={isSubmitting}>
-            Save Book
-          </Button>
+          <Button onClick={handleSubmit}>{book ? 'Save Changes' : 'Add Book'}</Button>
         </>
       }
     >
-      <form id="book-form" onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input
-            label="Title"
-            required
-            value={form.title}
-            onChange={(e) => updateField('title', e.target.value)}
-            error={errors.title}
-          />
-          <Input
-            label="Author"
-            required
-            value={form.author}
-            onChange={(e) => updateField('author', e.target.value)}
-            error={errors.author}
-          />
-          <Input
-            label="Category"
-            required
-            value={form.category}
-            onChange={(e) => updateField('category', e.target.value)}
-            error={errors.category}
-            placeholder="e.g. Fiction, Science, Reference"
-          />
-          <Input
-            label="Publisher"
-            required
-            value={form.publisher}
-            onChange={(e) => updateField('publisher', e.target.value)}
-            error={errors.publisher}
-          />
-          <Input
-            label="Publication Year"
-            required
-            inputMode="numeric"
-            value={form.publicationYear}
-            onChange={(e) => updateField('publicationYear', e.target.value)}
-            error={errors.publicationYear}
-          />
-          <Input
-            label="Accession Number"
-            required
-            value={form.accessionNumber}
-            onChange={(e) => updateField('accessionNumber', e.target.value)}
-            error={errors.accessionNumber}
-          />
-          <Input
-            label="ISBN"
-            required
-            value={form.isbn}
-            onChange={(e) => updateField('isbn', e.target.value)}
-            error={errors.isbn}
-          />
-          <Input
-            label="Shelf Location"
-            required
-            value={form.shelfLocation}
-            onChange={(e) => updateField('shelfLocation', e.target.value)}
-            error={errors.shelfLocation}
-          />
-          <Select
-            label="Format"
-            required
-            options={FORMAT_OPTIONS}
-            value={form.format}
-            onChange={(e) => updateField('format', e.target.value as BookFormat)}
-          />
-          <Input
-            label="Quantity"
-            required
-            type="number"
-            min={1}
-            step={1}
-            value={form.quantity}
-            onChange={(e) => updateField('quantity', e.target.value)}
-            error={errors.quantity}
-          />
-          <Select
-            label="Condition"
-            required
-            options={CONDITION_OPTIONS}
-            value={form.condition}
-            onChange={(e) => updateField('condition', e.target.value as BookCondition)}
-          />
-        </div>
-        <Textarea
-          label="Description"
-          hint="Optional — shown to members on the book's details page."
-          rows={3}
-          value={form.description}
-          onChange={(e) => updateField('description', e.target.value)}
-        />
-      </form>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="Title" htmlFor="book-title" error={errors.title} required>
+          <input id="book-title" className={inputClasses} value={form.title} onChange={set('title')} />
+        </Field>
+        <Field label="Author" htmlFor="book-author" error={errors.author} required>
+          <input id="book-author" className={inputClasses} value={form.author} onChange={set('author')} />
+        </Field>
+        <Field label="Category" htmlFor="book-category" error={errors.category} required>
+          <input id="book-category" className={inputClasses} value={form.category} onChange={set('category')} />
+        </Field>
+        <Field label="ISBN" htmlFor="book-isbn" error={errors.isbn} required>
+          <input id="book-isbn" className={inputClasses} value={form.isbn} onChange={set('isbn')} />
+        </Field>
+        <Field label="Quantity" htmlFor="book-quantity" error={errors.quantity} required>
+          <input id="book-quantity" type="number" min={1} className={inputClasses} value={form.quantity} onChange={set('quantity')} />
+        </Field>
+        <Field label="Condition" htmlFor="book-condition">
+          <select id="book-condition" className={inputClasses} value={form.condition} onChange={set('condition')}>
+            {CONDITIONS.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
     </Modal>
   );
 }

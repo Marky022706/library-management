@@ -1,92 +1,69 @@
-import { createContext, useCallback, useMemo, useState, type ReactNode } from 'react';
-import type { User } from '@/types';
-import { authService } from '@/services';
-import type { RegisterInput } from '@/services/authService';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import type { User, UserRole } from '../types';
+import { useLibraryData } from './LibraryDataContext';
 
-const STORAGE_KEY = 'bpl.currentUser';
+const SESSION_KEY = 'balingasag_session_user_id';
 
-function readStoredUser(): User | null {
-  try {
-    const raw = window.sessionStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as User) : null;
-  } catch {
-    return null;
-  }
+interface LoginResult {
+  ok: boolean;
+  error?: string;
+  role?: UserRole;
 }
 
-function persistUser(user: User | null) {
-  try {
-    if (user) window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-    else window.sessionStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // sessionStorage may be unavailable (e.g. private mode) — the mock session simply won't persist across reloads.
-  }
-}
-
-export interface AuthApi {
+interface AuthContextValue {
   currentUser: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<User>;
-  register: (input: RegisterInput) => Promise<User>;
+  /** True until the initial session-restore pass has run. `RequireAuth` waits on
+   *  this so it doesn't redirect to /login before localStorage has been checked. */
+  isInitializing: boolean;
+  login: (email: string, password: string) => LoginResult;
   logout: () => void;
-  updateCurrentUser: (patch: Partial<User>) => void;
 }
 
-export const AuthContext = createContext<AuthApi | undefined>(undefined);
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(() => readStoredUser());
-  const [isLoading, setIsLoading] = useState(false);
+  const { users } = useLibraryData();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
 
-  const login = useCallback(async (email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      const user = await authService.login(email, password);
-      setCurrentUser(user);
-      persistUser(user);
-      return user;
-    } finally {
-      setIsLoading(false);
+  // Restore the mock "session" on load (and whenever the underlying user
+  // record changes, e.g. a super admin suspending the signed-in account).
+  useEffect(() => {
+    const savedId = localStorage.getItem(SESSION_KEY);
+    if (savedId) {
+      const match = users.find((u) => u.id === savedId);
+      if (match && match.status === 'active') {
+        setCurrentUser(match);
+      } else if (!match) {
+        localStorage.removeItem(SESSION_KEY);
+      }
     }
-  }, []);
+    setIsInitializing(false);
+  }, [users]);
 
-  const register = useCallback(async (input: RegisterInput) => {
-    setIsLoading(true);
-    try {
-      const user = await authService.register(input);
-      return user;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const login = (email: string, password: string): LoginResult => {
+    const match = users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
 
-  const logout = useCallback(() => {
+    if (!match) return { ok: false, error: 'No account found with that email.' };
+    if (!password.trim()) return { ok: false, error: 'Enter your password.' };
+    if (match.status === 'pending') return { ok: false, error: 'This account is still pending approval.' };
+    if (match.status === 'suspended') return { ok: false, error: 'This account has been suspended. Contact a super admin.' };
+
+    setCurrentUser(match);
+    localStorage.setItem(SESSION_KEY, match.id);
+    return { ok: true, role: match.role };
+  };
+
+  const logout = () => {
     setCurrentUser(null);
-    persistUser(null);
-  }, []);
+    localStorage.removeItem(SESSION_KEY);
+  };
 
-  const updateCurrentUser = useCallback((patch: Partial<User>) => {
-    setCurrentUser((prev) => {
-      if (!prev) return prev;
-      const next = { ...prev, ...patch };
-      persistUser(next);
-      return next;
-    });
-  }, []);
+  return <AuthContext.Provider value={{ currentUser, isInitializing, login, logout }}>{children}</AuthContext.Provider>;
+}
 
-  const value = useMemo<AuthApi>(
-    () => ({
-      currentUser,
-      isAuthenticated: currentUser !== null,
-      isLoading,
-      login,
-      register,
-      logout,
-      updateCurrentUser,
-    }),
-    [currentUser, isLoading, login, register, logout, updateCurrentUser],
-  );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
+  return ctx;
 }

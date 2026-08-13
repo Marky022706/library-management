@@ -1,106 +1,108 @@
-import { NavLink } from 'react-router-dom';
-import { BookOpenCheck, LogOut, X } from 'lucide-react';
-import { cn } from '@/utils/cn';
-import { useAuth } from '@/hooks/useAuth';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { BookOpen, ChevronRight, LogOut } from 'lucide-react';
 import type { NavItem } from './navConfig';
+import { UserProfile } from './UserProfile';
+import { useAuth } from '../../context/AuthContext';
+import { cn } from '../../utils/cn';
 
-export interface SidebarProps {
-  navItems: NavItem[];
+interface SidebarProps {
+  basePath: string;
   roleLabel: string;
-  isOpen: boolean;
-  onClose: () => void;
+  userName: string;
+  navItems: NavItem[];
+  sectionLabel: string;
+  isSuperAdmin?: boolean;
+  mobileOpen: boolean;
+  onCloseMobile: () => void;
 }
 
-export function Sidebar({ navItems, roleLabel, isOpen, onClose }: SidebarProps) {
-  const { currentUser, logout } = useAuth();
+export function Sidebar({
+  basePath,
+  roleLabel,
+  userName,
+  navItems,
+  sectionLabel,
+  isSuperAdmin = false,
+  mobileOpen,
+  onCloseMobile,
+}: SidebarProps) {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
 
-  const content = (
-    <div className="flex h-full flex-col bg-white">
-      <div className="flex items-center justify-between gap-2 border-b border-gray-200 px-5 py-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600 text-white">
-            <BookOpenCheck className="h-5 w-5" aria-hidden="true" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold leading-tight text-gray-900">Balingasag Library</p>
-            <p className="text-xs leading-tight text-gray-500">{roleLabel}</p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-md p-1 text-gray-400 hover:bg-gray-100 md:hidden"
-          aria-label="Close navigation"
-        >
-          <X className="h-5 w-5" />
-        </button>
-      </div>
-
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            onClick={onClose}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                isActive ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
-              )
-            }
-          >
-            <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-            {item.label}
-          </NavLink>
-        ))}
-      </nav>
-
-      <div className="border-t border-gray-200 p-3">
-        <div className="mb-2 flex items-center gap-2 rounded-lg px-2 py-2">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700">
-            {currentUser ? `${currentUser.firstName[0]}${currentUser.lastName[0]}` : '?'}
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-gray-900">
-              {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Guest'}
-            </p>
-            <p className="truncate text-xs text-gray-500">{currentUser?.email}</p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={logout}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-red-50 hover:text-red-600"
-        >
-          <LogOut className="h-5 w-5" aria-hidden="true" />
-          Logout
-        </button>
-      </div>
-    </div>
-  );
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <>
-      {/* Desktop sidebar */}
-      <aside className="hidden w-64 shrink-0 border-r border-gray-200 md:block">{content}</aside>
-
-      {/* Mobile drawer */}
-      <div className={cn('fixed inset-0 z-40 md:hidden', isOpen ? '' : 'pointer-events-none')}>
-        <div
-          className={cn('absolute inset-0 bg-gray-900/50 transition-opacity', isOpen ? 'opacity-100' : 'opacity-0')}
-          onClick={onClose}
-          aria-hidden="true"
-        />
-        <div
-          className={cn(
-            'absolute inset-y-0 left-0 w-72 max-w-[85vw] shadow-xl transition-transform duration-200 ease-out',
-            isOpen ? 'translate-x-0' : '-translate-x-full',
-          )}
-        >
-          {content}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 bg-gray-900/50 lg:hidden" onClick={onCloseMobile} aria-hidden="true" />
+      )}
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 flex w-[250px] flex-col bg-sidebar transition-transform duration-200 lg:sticky lg:top-0 lg:z-0 lg:h-screen lg:translate-x-0',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
+        aria-label="Sidebar navigation"
+      >
+        <div className="flex items-center gap-3 px-5 pb-4 pt-6">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white">
+            <BookOpen className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0 leading-tight">
+            <p className="truncate font-bold text-white">Balingasag</p>
+            <p className="truncate text-xs text-primary-100">Public Library</p>
+          </div>
         </div>
-      </div>
+
+        <div className="mx-4 mb-5 rounded-xl bg-white/10 p-3">
+          <UserProfile name={userName} subtitle={roleLabel} dark />
+        </div>
+
+        <nav className="flex-1 overflow-y-auto px-3">
+          <p className="px-2 pb-2 text-xs font-semibold tracking-wider text-primary-100">{sectionLabel}</p>
+          <ul className="space-y-1">
+            {navItems.map((item) => (
+              <li key={item.to}>
+                <NavLink
+                  to={`${basePath}/${item.to}`}
+                  onClick={onCloseMobile}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                      isActive ? 'bg-sidebar-active text-white' : 'text-primary-50/90 hover:bg-sidebar-hover hover:text-white',
+                    )
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span className="flex-1 truncate">{item.label}</span>
+                      {isActive && <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />}
+                    </>
+                  )}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+
+          {isSuperAdmin && (
+            <p className="mt-6 px-2 pb-2 text-xs font-semibold tracking-wider text-primary-100">SUPER ADMIN</p>
+          )}
+        </nav>
+
+        <div className="px-3 pb-6 pt-3">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-primary-50/90 hover:bg-sidebar-hover hover:text-white"
+          >
+            <LogOut className="h-4 w-4" aria-hidden="true" />
+            Logout
+          </button>
+        </div>
+      </aside>
     </>
   );
 }

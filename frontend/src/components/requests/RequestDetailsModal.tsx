@@ -1,117 +1,86 @@
-import type { BorrowingStatus, LibraryRequest, RequestStatus, RequestType } from '@/types';
-import { fullName } from '@/types';
-import { Modal, Badge } from '@/components/ui';
-import { useLibrary } from '@/hooks/useLibrary';
-import { formatDate } from '@/utils/date';
+import type { BorrowRequest } from '../../types';
+import { Modal } from '../common/Modal';
+import { Button } from '../common/Button';
+import { Badge } from '../common/Badge';
+import { formatDate, MOCK_TODAY } from '../../utils/date';
+import { userDisplayName } from '../../data/users';
 
-export interface RequestDetailsModalProps {
-  isOpen: boolean;
+interface RequestDetailsModalProps {
+  request: BorrowRequest | null;
   onClose: () => void;
-  request: LibraryRequest | null;
+  onMarkReturned: (request: BorrowRequest) => void;
 }
 
-const TYPE_VARIANT: Record<RequestType, 'info' | 'neutral' | 'primary'> = {
-  Borrowing: 'info',
-  Archive: 'neutral',
-  Acquisition: 'primary',
-};
+export function RequestDetailsModal({ request, onClose, onMarkReturned }: RequestDetailsModalProps) {
+  if (!request) return null;
 
-const STATUS_VARIANT: Record<RequestStatus, 'warning' | 'success' | 'danger'> = {
-  pending: 'warning',
-  approved: 'success',
-  rejected: 'danger',
-};
-
-const BORROWING_STATUS_VARIANT: Record<BorrowingStatus, 'success' | 'warning' | 'danger' | 'info' | 'neutral'> = {
-  pending: 'warning',
-  active: 'info',
-  returned: 'success',
-  overdue: 'danger',
-  rejected: 'neutral',
-};
-
-export function RequestDetailsModal({ isOpen, onClose, request }: RequestDetailsModalProps) {
-  const { getUserById, getBookById, borrowings } = useLibrary();
-
-  const requester = request ? getUserById(request.requesterId) : undefined;
-  const approver = request?.approverId ? getUserById(request.approverId) : undefined;
-  const book = request?.bookId ? getBookById(request.bookId) : undefined;
-  const borrowing = request?.borrowingId ? borrowings.find((b) => b.id === request.borrowingId) : undefined;
+  const isActiveLoan = request.type === 'borrowing' && request.status === 'approved' && !request.returnedAt;
+  const isOverdue = isActiveLoan && Boolean(request.dueDate) && request.dueDate! < MOCK_TODAY;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Request Details" size="md">
-      {request && (
-        <div className="space-y-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={TYPE_VARIANT[request.type]}>{request.type}</Badge>
-            <Badge variant={STATUS_VARIANT[request.status]} className="capitalize">
+    <Modal
+      open={Boolean(request)}
+      onClose={onClose}
+      title={`Request ${request.id}`}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+          {isActiveLoan && <Button onClick={() => onMarkReturned(request)}>Mark as Returned</Button>}
+        </>
+      }
+    >
+      <dl className="grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <dt className="text-muted">Type</dt>
+          <dd className="mt-1 capitalize text-ink">{request.type}</dd>
+        </div>
+        <div>
+          <dt className="text-muted">Status</dt>
+          <dd className="mt-1">
+            <Badge tone={request.status === 'approved' ? 'green' : request.status === 'pending' ? 'amber' : 'red'} dot>
               {request.status}
             </Badge>
-            <span className="font-mono text-xs text-gray-400">{request.id}</span>
-          </div>
-
-          <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Requester</p>
-              <p className="text-sm text-gray-900">{requester ? fullName(requester) : 'Unknown'}</p>
-              {requester && <p className="text-xs text-gray-500">{requester.email}</p>}
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Date Requested</p>
-              <p className="text-sm text-gray-900">{formatDate(request.date)}</p>
-            </div>
-            {(book || request.bookTitle) && (
-              <div className="sm:col-span-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Book</p>
-                <p className="text-sm text-gray-900">{book?.title ?? request.bookTitle}</p>
-                {book && <p className="text-xs text-gray-500">{book.category} · Accession No. {book.accessionNumber}</p>}
-              </div>
-            )}
-            <div className="sm:col-span-2">
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Details</p>
-              <p className="text-sm text-gray-700">{request.details}</p>
-            </div>
-            {request.status !== 'pending' && (
-              <>
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Approver</p>
-                  <p className="text-sm text-gray-900">{approver ? fullName(approver) : '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Resolved Date</p>
-                  <p className="text-sm text-gray-900">{request.resolvedDate ? formatDate(request.resolvedDate) : '—'}</p>
-                </div>
-              </>
-            )}
-          </div>
-
-          {borrowing && (
-            <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Linked Borrowing</p>
-              <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-                <div>
-                  <p className="text-xs text-gray-400">Status</p>
-                  <Badge variant={BORROWING_STATUS_VARIANT[borrowing.status]} className="capitalize">
-                    {borrowing.status}
-                  </Badge>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">Due Date</p>
-                  <p className="text-gray-900">{formatDate(borrowing.dueDate)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">Borrowed</p>
-                  <p className="text-gray-900">{borrowing.borrowedDate ? formatDate(borrowing.borrowedDate) : '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">Returned</p>
-                  <p className="text-gray-900">{borrowing.returnedDate ? formatDate(borrowing.returnedDate) : '—'}</p>
-                </div>
-              </div>
-            </div>
-          )}
+          </dd>
         </div>
-      )}
+        <div>
+          <dt className="text-muted">Requester</dt>
+          <dd className="mt-1 text-ink">{userDisplayName(request.requesterId)}</dd>
+        </div>
+        <div>
+          <dt className="text-muted">Date Requested</dt>
+          <dd className="mt-1 text-ink">{formatDate(request.date)}</dd>
+        </div>
+        <div className="col-span-2">
+          <dt className="text-muted">Book / Note</dt>
+          <dd className="mt-1 text-ink">{request.note}</dd>
+        </div>
+        <div>
+          <dt className="text-muted">Approver</dt>
+          <dd className="mt-1 text-ink">{request.approverId ? userDisplayName(request.approverId) : '-'}</dd>
+        </div>
+        {request.resolvedDate && (
+          <div>
+            <dt className="text-muted">Resolved</dt>
+            <dd className="mt-1 text-ink">{formatDate(request.resolvedDate)}</dd>
+          </div>
+        )}
+        {request.dueDate && (
+          <div>
+            <dt className="text-muted">Due Date</dt>
+            <dd className="mt-1 text-ink">
+              {formatDate(request.dueDate)} {isOverdue && <Badge tone="red">overdue</Badge>}
+            </dd>
+          </div>
+        )}
+        {request.returnedAt && (
+          <div>
+            <dt className="text-muted">Returned</dt>
+            <dd className="mt-1 text-ink">{formatDate(request.returnedAt)}</dd>
+          </div>
+        )}
+      </dl>
     </Modal>
   );
 }

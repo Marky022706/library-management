@@ -2,67 +2,115 @@
 
 @theme {
   --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-heading: "Poppins", var(--font-sans);
+  --font-ui: "Lato", var(--font-sans);
 
-  /* Balingasag Public Library brand palette — primary green scale */
-  --color-primary-50: #f1faf3;
-  --color-primary-100: #dcf3e2;
-  --color-primary-200: #bbe6c8;
-  --color-primary-300: #8dd2a3;
-  --color-primary-400: #5bb87b;
-  --color-primary-500: #369c5c;
-  --color-primary-600: #257a46;
-  --color-primary-700: #1f6139;
-  --color-primary-800: #1c4d30;
-  --color-primary-900: #184029;
-  --color-primary-950: #0b2417;
+  /* Balingasag Public Library brand palette */
+  --color-primary-50: #f0fdf4;
+  --color-primary-100: #dcfce7;
+  --color-primary-200: #bbf7d0;
+  --color-primary-300: #86efac;
+  --color-primary-400: #4ade80;
+  --color-primary-500: #22c55e;
+  --color-primary-600: #16a34a;
+  --color-primary-700: #15803d;
+  --color-primary-800: #14532d;
+  --color-primary-900: #0f3f23;
+  --color-primary-950: #0a2c18;
+
+  /* Dark sidebar green */
+  --color-sidebar: #116b35;
+  --color-sidebar-hover: #14803f;
+  --color-sidebar-active: #1a9950;
+
+  /* Public landing-page accents (admin panel doesn't use these) */
+  --color-deep: #075e54;
+  --color-main: #008a3d;
+  --color-mint: #6ee7a0;
+
+  --color-surface: #ffffff;
+  --color-bg: #f8fafc;
+  --color-ink: #172033;
+  --color-muted: #64748b;
+  --color-line: #e5e7eb;
 }
 
 @layer base {
   * {
-    border-color: theme(--color-gray-200);
+    border-color: var(--color-line);
   }
 
   html {
     -webkit-text-size-adjust: 100%;
   }
 
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* Belt-and-suspenders: every JS-driven animation already checks this media
+     query itself, but this catches anything else (hover/transition utilities
+     included) so nothing moves for users who've asked for reduced motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  section[id] {
+    scroll-margin-top: 88px;
+  }
+
   body {
-    @apply bg-gray-50 text-gray-800 antialiased;
+    @apply antialiased;
+    background-color: var(--color-bg);
+    color: var(--color-ink);
     font-family: var(--font-sans);
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply text-gray-900 font-semibold tracking-tight;
+    color: var(--color-ink);
+    font-family: var(--font-heading);
+    @apply font-semibold tracking-tight;
   }
 
   ::selection {
-    @apply bg-primary-200 text-primary-900;
+    background-color: var(--color-primary-200);
+    color: var(--color-primary-900);
   }
 
   /* Slim, unobtrusive scrollbars */
   * {
     scrollbar-width: thin;
-    scrollbar-color: theme(--color-gray-300) transparent;
+    scrollbar-color: #cbd5e1 transparent;
   }
   *::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   *::-webkit-scrollbar-thumb {
-    background-color: theme(--color-gray-300);
+    background-color: #cbd5e1;
     border-radius: 9999px;
   }
   *::-webkit-scrollbar-track {
     background: transparent;
   }
-}
 
-@layer utilities {
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
+  /* Lato for UI chrome — buttons and nav links — Inter stays on body copy. */
+  button, nav a {
+    font-family: var(--font-ui);
   }
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+
+  button {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary-600);
+    outline-offset: 2px;
   }
 }

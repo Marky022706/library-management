@@ -1,99 +1,51 @@
-import { useMemo } from 'react';
-import type { User, UserRole, UserStatus } from '@/types';
-import { fullName } from '@/types';
-import { Modal, Badge } from '@/components/ui';
-import { useLibrary } from '@/hooks/useLibrary';
-import { formatDate, formatDateTime } from '@/utils/date';
+import type { User } from '../../types';
+import { Modal } from '../common/Modal';
+import { Button } from '../common/Button';
+import { Badge } from '../common/Badge';
+import { formatDate } from '../../utils/date';
 
-export interface UserDetailsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface UserDetailsModalProps {
   user: User | null;
+  onClose: () => void;
 }
 
-const ROLE_VARIANT: Record<UserRole, 'neutral' | 'primary' | 'info'> = {
-  member: 'neutral',
-  admin: 'primary',
-  superadmin: 'info',
-};
-
-const STATUS_VARIANT: Record<UserStatus, 'warning' | 'success' | 'neutral' | 'danger'> = {
-  pending: 'warning',
-  active: 'success',
-  inactive: 'neutral',
-  suspended: 'danger',
-};
-
-export function UserDetailsModal({ isOpen, onClose, user }: UserDetailsModalProps) {
-  const { borrowingsByUser } = useLibrary();
-
-  const stats = useMemo(() => {
-    if (!user) return { active: 0, total: 0 };
-    const borrowings = borrowingsByUser(user.id);
-    return {
-      active: borrowings.filter((b) => b.status === 'active' || b.status === 'overdue').length,
-      total: borrowings.length,
-    };
-  }, [borrowingsByUser, user]);
+export function UserDetailsModal({ user, onClose }: UserDetailsModalProps) {
+  if (!user) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Member Profile" size="md">
-      {user && (
-        <div className="space-y-5">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary-100 text-lg font-semibold text-primary-700">
-              {user.firstName.charAt(0)}
-              {user.lastName.charAt(0)}
-            </div>
-            <div>
-              <p className="text-base font-semibold text-gray-900">{fullName(user)}</p>
-              <p className="text-sm text-gray-500">{user.email}</p>
-              <div className="mt-1 flex items-center gap-2">
-                <Badge variant={ROLE_VARIANT[user.role]} className="capitalize">
-                  {user.role}
-                </Badge>
-                <Badge variant={STATUS_VARIANT[user.status]} className="capitalize">
-                  {user.status}
-                </Badge>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Phone</p>
-              <p className="text-sm text-gray-900">{user.phone}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Library Card ID</p>
-              <p className="text-sm text-gray-900">{user.libraryCardId}</p>
-            </div>
-            <div className="sm:col-span-2">
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Address</p>
-              <p className="text-sm text-gray-900">{user.address}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Registered</p>
-              <p className="text-sm text-gray-900">{formatDate(user.registeredAt)}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Last Login</p>
-              <p className="text-sm text-gray-900">{user.lastLoginAt ? formatDateTime(user.lastLoginAt) : 'Never'}</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 rounded-lg border border-gray-100 bg-gray-50 p-4">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Active Borrowings</p>
-              <p className="text-xl font-semibold text-gray-900">{stats.active}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Total Borrowings</p>
-              <p className="text-xl font-semibold text-gray-900">{stats.total}</p>
-            </div>
-          </div>
+    <Modal open={Boolean(user)} onClose={onClose} title="User Details" footer={<Button onClick={onClose}>Close</Button>}>
+      <div className="flex items-center gap-3">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-100 text-xl font-semibold text-primary-800" aria-hidden="true">
+          {user.name.charAt(0).toUpperCase()}
+        </span>
+        <div>
+          <p className="text-base font-semibold text-ink">{user.name}</p>
+          <p className="text-sm text-muted">{user.email}</p>
         </div>
-      )}
+      </div>
+
+      <dl className="mt-5 grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <dt className="text-muted">Role</dt>
+          <dd className="mt-1 capitalize text-ink">{user.role === 'superadmin' ? 'Super Admin' : user.role}</dd>
+        </div>
+        <div>
+          <dt className="text-muted">Status</dt>
+          <dd className="mt-1">
+            <Badge tone={user.status === 'active' ? 'green' : user.status === 'pending' ? 'amber' : 'red'} dot>
+              {user.status}
+            </Badge>
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted">Registered</dt>
+          <dd className="mt-1 text-ink">{formatDate(user.registeredAt)}</dd>
+        </div>
+        <div>
+          <dt className="text-muted">Library Card ID</dt>
+          <dd className="mt-1 text-ink">{user.id.toUpperCase()}</dd>
+        </div>
+      </dl>
     </Modal>
   );
 }

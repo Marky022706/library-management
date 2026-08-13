@@ -1,135 +1,77 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { AuthProvider } from '@/context/AuthContext';
-import { LibraryProvider } from '@/context/LibraryContext';
-import { ToastProvider } from '@/context/ToastContext';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { RoleGuard } from '@/components/RoleGuard';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { LibraryDataProvider } from './context/LibraryDataContext';
+import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
+import { ToastViewport } from './components/common/ToastViewport';
+import { RequireAuth } from './components/layout/RequireAuth';
+import { AdminLayout } from './components/layout/AdminLayout';
+import { MemberLayout } from './components/layout/MemberLayout';
+import { LandingPage } from './pages/LandingPage';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
+import { NotFound } from './pages/NotFound';
+import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { BookManagement } from './pages/admin/BookManagement';
+import { UserManagement } from './pages/admin/UserManagement';
+import { RequestManagement } from './pages/admin/RequestManagement';
+import { Attendance } from './pages/admin/Attendance';
+import { Reports } from './pages/admin/Reports';
+import { Announcements } from './pages/admin/Announcements';
+import { MemberDashboard } from './pages/member/MemberDashboard';
 
-import { AuthLayout } from '@/layouts/AuthLayout';
-import { MemberLayout } from '@/layouts/MemberLayout';
-import { AdminLayout } from '@/layouts/AdminLayout';
-
-import { Login } from '@/pages/auth/Login';
-import { Register } from '@/pages/auth/Register';
-import { ForgotPassword } from '@/pages/auth/ForgotPassword';
-
-import { Dashboard as MemberDashboard } from '@/pages/member/Dashboard';
-import { BookCatalog } from '@/pages/member/BookCatalog';
-import { BookDetails } from '@/pages/member/BookDetails';
-import { MyBooks } from '@/pages/member/MyBooks';
-import { ActivityHistory } from '@/pages/member/ActivityHistory';
-import { Notifications } from '@/pages/member/Notifications';
-import { Favorites } from '@/pages/member/Favorites';
-import { Profile } from '@/pages/member/Profile';
-
-import { Dashboard as AdminDashboard } from '@/pages/admin/Dashboard';
-import { Books } from '@/pages/admin/Books';
-import { Users } from '@/pages/admin/Users';
-import { Requests } from '@/pages/admin/Requests';
-import { Attendance } from '@/pages/admin/Attendance';
-import { Reports } from '@/pages/admin/Reports';
-import { Announcements } from '@/pages/admin/Announcements';
-
-import { Settings } from '@/pages/superadmin/Settings';
-import { AuditLogs } from '@/pages/superadmin/AuditLogs';
-import { SystemLogs } from '@/pages/superadmin/SystemLogs';
-import { RecycleBin } from '@/pages/superadmin/RecycleBin';
-import { BackupRestore } from '@/pages/superadmin/BackupRestore';
-
-import { RootRedirect } from '@/pages/RootRedirect';
-import { Unauthorized } from '@/pages/Unauthorized';
-import { NotFound } from '@/pages/NotFound';
+// Admin and Super Admin are two separate route prefixes sharing the exact
+// same page components (see AdminLayout) — this factory avoids writing the
+// nested route tree out twice.
+function adminSectionRoutes() {
+  return (
+    <>
+      <Route index element={<Navigate to="dashboard" replace />} />
+      <Route path="dashboard" element={<AdminDashboard />} />
+      <Route path="books" element={<BookManagement />} />
+      <Route path="users" element={<UserManagement />} />
+      <Route path="requests" element={<RequestManagement />} />
+      <Route path="attendance" element={<Attendance />} />
+      <Route path="reports" element={<Reports />} />
+      <Route path="announcements" element={<Announcements />} />
+    </>
+  );
+}
 
 function App() {
   return (
-    <BrowserRouter>
+    <LibraryDataProvider>
       <AuthProvider>
-        <LibraryProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/" element={<RootRedirect />} />
+        <ToastProvider>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-              <Route element={<AuthLayout />}>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route element={<RequireAuth role="admin" />}>
+              <Route path="/admin" element={<AdminLayout />}>
+                {adminSectionRoutes()}
               </Route>
+            </Route>
 
-              <Route path="/unauthorized" element={<Unauthorized />} />
-
-              <Route element={<ProtectedRoute allowedRoles={['member']} />}>
-                <Route path="/member" element={<MemberLayout />}>
-                  <Route index element={<Navigate to="dashboard" replace />} />
-                  <Route path="dashboard" element={<MemberDashboard />} />
-                  <Route path="catalog" element={<BookCatalog />} />
-                  <Route path="catalog/:bookId" element={<BookDetails />} />
-                  <Route path="my-books" element={<MyBooks />} />
-                  <Route path="activity" element={<ActivityHistory />} />
-                  <Route path="notifications" element={<Notifications />} />
-                  <Route path="favorites" element={<Favorites />} />
-                  <Route path="profile" element={<Profile />} />
-                </Route>
+            <Route element={<RequireAuth role="superadmin" />}>
+              <Route path="/superadmin" element={<AdminLayout />}>
+                {adminSectionRoutes()}
               </Route>
+            </Route>
 
-              <Route element={<ProtectedRoute allowedRoles={['admin', 'superadmin']} />}>
-                <Route path="/admin" element={<AdminLayout />}>
-                  <Route index element={<Navigate to="dashboard" replace />} />
-                  <Route path="dashboard" element={<AdminDashboard />} />
-                  <Route path="books" element={<Books />} />
-                  <Route path="users" element={<Users />} />
-                  <Route path="requests" element={<Requests />} />
-                  <Route path="attendance" element={<Attendance />} />
-                  <Route path="reports" element={<Reports />} />
-                  <Route path="announcements" element={<Announcements />} />
-                  <Route
-                    path="settings"
-                    element={
-                      <RoleGuard role="superadmin">
-                        <Settings />
-                      </RoleGuard>
-                    }
-                  />
-                  <Route
-                    path="audit-logs"
-                    element={
-                      <RoleGuard role="superadmin">
-                        <AuditLogs />
-                      </RoleGuard>
-                    }
-                  />
-                  <Route
-                    path="system-logs"
-                    element={
-                      <RoleGuard role="superadmin">
-                        <SystemLogs />
-                      </RoleGuard>
-                    }
-                  />
-                  <Route
-                    path="recycle-bin"
-                    element={
-                      <RoleGuard role="superadmin">
-                        <RecycleBin />
-                      </RoleGuard>
-                    }
-                  />
-                  <Route
-                    path="backup-restore"
-                    element={
-                      <RoleGuard role="superadmin">
-                        <BackupRestore />
-                      </RoleGuard>
-                    }
-                  />
-                </Route>
+            <Route element={<RequireAuth role="member" />}>
+              <Route path="/member" element={<MemberLayout />}>
+                <Route index element={<Navigate to="dashboard" replace />} />
+                <Route path="dashboard" element={<MemberDashboard />} />
               </Route>
+            </Route>
 
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </ToastProvider>
-        </LibraryProvider>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <ToastViewport />
+        </ToastProvider>
       </AuthProvider>
-    </BrowserRouter>
+    </LibraryDataProvider>
   );
 }
 

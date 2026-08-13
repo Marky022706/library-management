@@ -1,48 +1,47 @@
-import { createContext, useCallback, useMemo, useState, type ReactNode } from 'react';
-import { ToastViewport, type ToastItemData, type ToastVariant } from '@/components/ui/Toast';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
-export interface ToastApi {
-  success: (message: string) => void;
-  error: (message: string) => void;
-  info: (message: string) => void;
-  warning: (message: string) => void;
+export type ToastVariant = 'success' | 'error' | 'info';
+
+export interface ToastItem {
+  id: string;
+  message: string;
+  variant: ToastVariant;
 }
 
-export const ToastContext = createContext<ToastApi | undefined>(undefined);
+interface ToastContextValue {
+  toasts: ToastItem[];
+  showToast: (message: string, variant?: ToastVariant) => void;
+  dismissToast: (id: string) => void;
+}
+
+const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
 let toastCounter = 0;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<ToastItemData[]>([]);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const dismiss = useCallback((id: string) => {
+  const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const push = useCallback(
-    (variant: ToastVariant, message: string) => {
+  const showToast = useCallback(
+    (message: string, variant: ToastVariant = 'success') => {
       toastCounter += 1;
-      const id = `toast_${toastCounter}`;
+      const id = `toast-${toastCounter}`;
       setToasts((prev) => [...prev, { id, message, variant }]);
-      window.setTimeout(() => dismiss(id), 4500);
+      setTimeout(() => dismissToast(id), 3500);
     },
-    [dismiss],
+    [dismissToast],
   );
 
-  const api = useMemo<ToastApi>(
-    () => ({
-      success: (message) => push('success', message),
-      error: (message) => push('error', message),
-      info: (message) => push('info', message),
-      warning: (message) => push('warning', message),
-    }),
-    [push],
-  );
+  const value = useMemo(() => ({ toasts, showToast, dismissToast }), [toasts, showToast, dismissToast]);
 
-  return (
-    <ToastContext.Provider value={api}>
-      {children}
-      <ToastViewport toasts={toasts} onDismiss={dismiss} />
-    </ToastContext.Provider>
-  );
+  return <ToastContext.Provider value={value}>{children}</ToastContext.Provider>;
+}
+
+export function useToast(): ToastContextValue {
+  const ctx = useContext(ToastContext);
+  if (!ctx) throw new Error('useToast must be used within a ToastProvider');
+  return ctx;
 }

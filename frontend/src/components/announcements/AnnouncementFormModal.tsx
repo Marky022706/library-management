@@ -1,91 +1,75 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import type { Announcement } from '@/types';
-import { Modal, Button, Input, Textarea } from '@/components/ui';
+import { useEffect, useState } from 'react';
+import type { Announcement } from '../../types';
+import { Modal } from '../common/Modal';
+import { Button } from '../common/Button';
+import { Field, inputClasses } from '../common/Field';
 
-export interface AnnouncementFormInput {
-  title: string;
-  content: string;
-}
-
-export interface AnnouncementFormModalProps {
-  isOpen: boolean;
+interface AnnouncementFormModalProps {
+  open: boolean;
+  announcement: Announcement | null;
   onClose: () => void;
-  initialAnnouncement?: Announcement;
-  onSubmit: (input: AnnouncementFormInput) => void | Promise<void>;
+  onSubmit: (values: { title: string; content: string }, editingId?: string) => void;
+  onPublishToggle?: (announcement: Announcement) => void;
 }
 
-interface FormErrors {
-  title?: string;
-  content?: string;
-}
+const EMPTY_FORM = { title: '', content: '' };
 
-function validate(input: AnnouncementFormInput): FormErrors {
-  const errors: FormErrors = {};
-  if (!input.title.trim()) errors.title = 'Title is required.';
-  if (!input.content.trim()) errors.content = 'Content is required.';
-  else if (input.content.trim().length < 10) errors.content = 'Content should be at least 10 characters.';
-  return errors;
-}
-
-export function AnnouncementFormModal({ isOpen, onClose, initialAnnouncement, onSubmit }: AnnouncementFormModalProps) {
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export function AnnouncementFormModal({ open, announcement, onClose, onSubmit, onPublishToggle }: AnnouncementFormModalProps) {
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!isOpen) return;
-    setTitle(initialAnnouncement?.title ?? '');
-    setContent(initialAnnouncement?.content ?? '');
+    if (!open) return;
     setErrors({});
-  }, [isOpen, initialAnnouncement]);
+    setForm(announcement ? { title: announcement.title, content: announcement.content } : EMPTY_FORM);
+  }, [open, announcement]);
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    const input: AnnouncementFormInput = { title: title.trim(), content: content.trim() };
-    const nextErrors = validate(input);
+  const validate = () => {
+    const nextErrors: Record<string, string> = {};
+    if (!form.title.trim()) nextErrors.title = 'Title is required.';
+    if (!form.content.trim()) nextErrors.content = 'Description is required.';
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
+    return Object.keys(nextErrors).length === 0;
+  };
 
-    setIsSubmitting(true);
-    try {
-      await onSubmit(input);
-    } catch {
-      // The caller is responsible for surfacing the error (e.g. via a toast).
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+  const handleSubmit = () => {
+    if (!validate()) return;
+    onSubmit({ title: form.title.trim(), content: form.content.trim() }, announcement?.id);
+  };
 
   return (
     <Modal
-      isOpen={isOpen}
+      open={open}
       onClose={onClose}
-      title={initialAnnouncement ? 'Edit Announcement' : 'New Announcement'}
-      description={initialAnnouncement ? 'Update this announcement’s content.' : 'New announcements are saved as a draft first.'}
-      size="md"
+      title={announcement ? 'Edit Announcement' : 'New Announcement'}
       footer={
         <>
-          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+          <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" form="announcement-form" isLoading={isSubmitting}>
-            Save Announcement
-          </Button>
+          {announcement && onPublishToggle && (
+            <Button variant="secondary" onClick={() => onPublishToggle(announcement)}>
+              {announcement.status === 'published' ? 'Unpublish' : 'Publish'}
+            </Button>
+          )}
+          <Button onClick={handleSubmit}>{announcement ? 'Save Changes' : 'Save as Draft'}</Button>
         </>
       }
     >
-      <form id="announcement-form" onSubmit={handleSubmit} className="space-y-4">
-        <Input label="Title" required value={title} onChange={(e) => setTitle(e.target.value)} error={errors.title} />
-        <Textarea
-          label="Content"
-          required
-          rows={6}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          error={errors.content}
-        />
-      </form>
+      <div className="flex flex-col gap-4">
+        <Field label="Title" htmlFor="ann-title" error={errors.title} required>
+          <input id="ann-title" className={inputClasses} value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
+        </Field>
+        <Field label="Description" htmlFor="ann-content" error={errors.content} required>
+          <textarea
+            id="ann-content"
+            rows={5}
+            className={inputClasses}
+            value={form.content}
+            onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
+          />
+        </Field>
+      </div>
     </Modal>
   );
 }
