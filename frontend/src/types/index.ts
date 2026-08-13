@@ -1,34 +1,95 @@
-export type RoleName = 'Super Admin' | 'Admin' | 'Librarian' | 'Member';
+// Shared domain types for the Admin/Super Admin panel.
+// Kept framework-agnostic (plain interfaces + string unions, no enums — see
+// tsconfig `erasableSyntaxOnly`) so this layer can be swapped for real API
+// responses later without touching component code.
 
-export interface Role {
-  role_id: number;
-  role_name: RoleName;
-}
+export type UserRole = 'member' | 'admin' | 'superadmin';
 
-export interface LibraryCard {
-  card_id: number;
-  user_id: number;
-  qr_code_value: string;
-  issued_date: string;
-  card_status: 'Active' | 'Lost' | 'Expired' | 'Revoked';
-}
+export type UserStatus = 'active' | 'pending' | 'suspended';
 
 export interface User {
-  user_id: number;
-  role_id: number;
-  school_id?: string;
-  first_name: string;
-  last_name: string;
+  id: string;
+  name: string;
   email: string;
-  phone_number?: string;
-  account_status: 'Active' | 'Suspended' | 'Inactive';
-  created_at: string;
-  role?: Role;
-  library_card?: LibraryCard;
+  role: UserRole;
+  status: UserStatus;
+  registeredAt: string; // ISO date
 }
 
-export interface AuthResponse {
+export type BookCondition = 'Excellent' | 'Good' | 'Fair' | 'Worn';
+
+export type BookStatus = 'active' | 'archived';
+
+export interface Book {
+  id: string;
+  title: string;
+  author: string;
+  category: string;
+  isbn: string;
+  quantity: number;
+  available: number;
+  condition: BookCondition;
+  status: BookStatus;
+  coverColor: string; // placeholder cover tint, stands in for a real cover image
+}
+
+export type RequestType = 'borrowing' | 'acquisition' | 'archive';
+
+export type RequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface BorrowRequest {
+  id: string;
+  type: RequestType;
+  requesterId: string;
+  bookId?: string;
+  note: string; // book title for borrowing, free-text note for acquisition/archive
+  date: string; // ISO date the request was made
+  status: RequestStatus;
+  approverId?: string;
+  resolvedDate?: string;
+  /** Only meaningful once an approved `borrowing` request is checked out. */
+  dueDate?: string;
+  /** Set once the borrowed copy has been returned. */
+  returnedAt?: string;
+}
+
+export type AttendanceStatus = 'inside' | 'left';
+
+export interface AttendanceRecord {
+  id: string;
+  memberId: string;
+  date: string; // ISO date
+  timeIn: string; // "HH:mm"
+  timeOut?: string; // "HH:mm"
+  status: AttendanceStatus;
+}
+
+export type AnnouncementStatus = 'draft' | 'published' | 'archived';
+
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  status: AnnouncementStatus;
+  date: string; // ISO date
+}
+
+export type NotificationType = 'success' | 'info' | 'warning' | 'danger';
+
+export interface Notification {
+  id: string;
+  title: string;
   message: string;
-  user: User;
-  token: string;
+  type: NotificationType;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface DashboardStats {
+  totalBooks: number;
+  members: number;
+  borrowed: number;
+  overdue: number;
+  pendingRequests: number;
+  todaysVisitors: number;
 }

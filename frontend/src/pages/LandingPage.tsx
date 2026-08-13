@@ -1,24 +1,29 @@
-import React from 'react';
-import { Header } from '../components/Header';
-import { HeroSection } from '../components/HeroSection';
-import { FeatureCards } from '../components/FeatureCards';
-import { HowItWorks } from '../components/HowItWorks';
-import { AboutUsSection } from '../components/AboutUsSection';
-import { ContactUsSection } from '../components/ContactUsSection';
-import { Footer } from '../components/Footer';
+import { Navbar } from '../components/landing/Navbar';
+import { Hero } from '../components/landing/Hero';
+import { QuickAccess } from '../components/landing/QuickAccess';
+import { Services } from '../components/landing/Services';
+import { HowItWorks } from '../components/landing/HowItWorks';
+import { AboutLibrary } from '../components/landing/AboutLibrary';
+import { CommunityStats } from '../components/landing/CommunityStats';
+import { AnnouncementsSection } from '../components/landing/AnnouncementsSection';
+import { ContactSection } from '../components/landing/ContactSection';
+import { Footer } from '../components/landing/Footer';
 
-export const LandingPage: React.FC = () => {
+export function LandingPage() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <Header />
-      <main style={{ flexGrow: 1 }}>
-        <HeroSection />
-        <FeatureCards />
+    <div className="min-h-screen bg-white">
+      <Navbar />
+      <main>
+        <Hero />
+        <QuickAccess />
+        <Services />
         <HowItWorks />
-        <AboutUsSection />
-        <ContactUsSection />
+        <AboutLibrary />
+        <CommunityStats />
+        <AnnouncementsSection />
+        <ContactSection />
       </main>
       <Footer />
     </div>
   );
-};
+}

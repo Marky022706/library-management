@@ -1,68 +1,78 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { LibraryDataProvider } from './context/LibraryDataContext';
 import { AuthProvider } from './context/AuthContext';
-import { ProtectedRoute } from './components/ProtectedRoute';
+import { ToastProvider } from './context/ToastContext';
+import { ToastViewport } from './components/common/ToastViewport';
+import { RequireAuth } from './components/layout/RequireAuth';
+import { AdminLayout } from './components/layout/AdminLayout';
+import { MemberLayout } from './components/layout/MemberLayout';
 import { LandingPage } from './pages/LandingPage';
-import { LoginPage } from './pages/auth/LoginPage';
-import { RegisterPage } from './pages/auth/RegisterPage';
-import { DashboardLayout } from './layouts/DashboardLayout';
-import { DashboardPage } from './pages/dashboard/DashboardPage';
-import { AdminSectionPage } from './pages/dashboard/AdminSectionPage';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
+import { NotFound } from './pages/NotFound';
+import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { BookManagement } from './pages/admin/BookManagement';
+import { UserManagement } from './pages/admin/UserManagement';
+import { RequestManagement } from './pages/admin/RequestManagement';
+import { Attendance } from './pages/admin/Attendance';
+import { Reports } from './pages/admin/Reports';
+import { Announcements } from './pages/admin/Announcements';
+import { MemberDashboard } from './pages/member/MemberDashboard';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-    },
-  },
-});
+// Admin and Super Admin are two separate route prefixes sharing the exact
+// same page components (see AdminLayout) — this factory avoids writing the
+// nested route tree out twice.
+function adminSectionRoutes() {
+  return (
+    <>
+      <Route index element={<Navigate to="dashboard" replace />} />
+      <Route path="dashboard" element={<AdminDashboard />} />
+      <Route path="books" element={<BookManagement />} />
+      <Route path="users" element={<UserManagement />} />
+      <Route path="requests" element={<RequestManagement />} />
+      <Route path="attendance" element={<Attendance />} />
+      <Route path="reports" element={<Reports />} />
+      <Route path="announcements" element={<Announcements />} />
+    </>
+  );
+}
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
+    <LibraryDataProvider>
       <AuthProvider>
-        <BrowserRouter>
+        <ToastProvider>
           <Routes>
-            {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-            {/* Authenticated Dashboard Routes */}
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<DashboardPage />} />
-              <Route path="catalog" element={<AdminSectionPage section="books" />} />
-              <Route path="categories" element={<AdminSectionPage section="categories" />} />
-              <Route path="authors" element={<AdminSectionPage section="authors" />} />
-              <Route path="members" element={<AdminSectionPage section="members" />} />
-              <Route path="transactions" element={<AdminSectionPage section="transactions" />} />
-              <Route path="reservations" element={<AdminSectionPage section="reservations" />} />
-              <Route path="fines" element={<AdminSectionPage section="fines" />} />
-              <Route path="attendance" element={<AdminSectionPage section="attendance" />} />
-              <Route path="reports" element={<AdminSectionPage section="reports" />} />
-              <Route path="notifications" element={<AdminSectionPage section="notifications" />} />
-              <Route path="settings" element={<AdminSectionPage section="settings" />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route element={<RequireAuth role="admin" />}>
+              <Route path="/admin" element={<AdminLayout />}>
+                {adminSectionRoutes()}
+              </Route>
             </Route>
 
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route element={<RequireAuth role="superadmin" />}>
+              <Route path="/superadmin" element={<AdminLayout />}>
+                {adminSectionRoutes()}
+              </Route>
+            </Route>
+
+            <Route element={<RequireAuth role="member" />}>
+              <Route path="/member" element={<MemberLayout />}>
+                <Route index element={<Navigate to="dashboard" replace />} />
+                <Route path="dashboard" element={<MemberDashboard />} />
+              </Route>
+            </Route>
+
+            <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
+          <ToastViewport />
+        </ToastProvider>
       </AuthProvider>
-    </QueryClientProvider>
+    </LibraryDataProvider>
   );
 }
 
 export default App;
-
-
-
