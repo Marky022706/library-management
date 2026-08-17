@@ -9,11 +9,42 @@ export type UserStatus = 'active' | 'pending' | 'suspended';
 
 export interface User {
   id: string;
+  user_id?: string;
   name: string;
   email: string;
+  username?: string;
   role: UserRole;
   status: UserStatus;
   registeredAt: string; // ISO date
+
+  // Personal Information
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  contactNumber?: string;
+  phone?: string;
+  address?: string;
+  created_at?: string;
+  registered_at?: string;
+
+  // Student Information
+  studentId?: string;
+  school?: string;
+  course?: string;
+  yearLevel?: string;
+
+  // Identification & Documents
+  schoolIdUrl?: string;
+  profilePhotoUrl?: string;
+  termsAgreed?: boolean;
+  infoAccurateConfirmed?: boolean;
+
+  // Library Card & QR Identification
+  libraryCardNumber?: string;
+  qrCodeData?: string;
+  approvedAt?: string;
 }
 
 export type BookCondition = 'Excellent' | 'Good' | 'Fair' | 'Worn';

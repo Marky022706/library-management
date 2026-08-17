@@ -18,10 +18,8 @@ import { Attendance } from './pages/admin/Attendance';
 import { Reports } from './pages/admin/Reports';
 import { Announcements } from './pages/admin/Announcements';
 import { MemberDashboard } from './pages/member/MemberDashboard';
+import { SuperAdminDashboard } from './pages/superadmin/SuperAdminDashboard';
 
-// Admin and Super Admin are two separate route prefixes sharing the exact
-// same page components (see AdminLayout) — this factory avoids writing the
-// nested route tree out twice.
 function adminSectionRoutes() {
   return (
     <>
@@ -33,6 +31,26 @@ function adminSectionRoutes() {
       <Route path="attendance" element={<Attendance />} />
       <Route path="reports" element={<Reports />} />
       <Route path="announcements" element={<Announcements />} />
+    </>
+  );
+}
+
+function superAdminSectionRoutes() {
+  return (
+    <>
+      <Route index element={<Navigate to="dashboard" replace />} />
+      <Route path="dashboard" element={<SuperAdminDashboard />} />
+      <Route path="books" element={<BookManagement />} />
+      <Route path="users" element={<UserManagement />} />
+      <Route path="requests" element={<RequestManagement />} />
+      <Route path="attendance" element={<Attendance />} />
+      <Route path="reports" element={<Reports />} />
+      <Route path="announcements" element={<Announcements />} />
+      <Route path="settings" element={<SuperAdminDashboard />} />
+      <Route path="logs" element={<SuperAdminDashboard />} />
+      <Route path="backup" element={<SuperAdminDashboard />} />
+      <Route path="recycle-bin" element={<BookManagement />} />
+      <Route path="profile" element={<UserManagement />} />
     </>
   );
 }
@@ -54,8 +72,8 @@ function App() {
             </Route>
 
             <Route element={<RequireAuth role="superadmin" />}>
-              <Route path="/superadmin" element={<AdminLayout />}>
-                {adminSectionRoutes()}
+              <Route path="/super_admin" element={<AdminLayout />}>
+                {superAdminSectionRoutes()}
               </Route>
             </Route>
 
@@ -63,6 +81,13 @@ function App() {
               <Route path="/member" element={<MemberLayout />}>
                 <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={<MemberDashboard />} />
+                <Route path="catalog" element={<MemberDashboard />} />
+                <Route path="my-books" element={<MemberDashboard />} />
+                <Route path="reservations" element={<MemberDashboard />} />
+                <Route path="favorites" element={<MemberDashboard />} />
+                <Route path="history" element={<MemberDashboard />} />
+                <Route path="notifications" element={<MemberDashboard />} />
+                <Route path="profile" element={<MemberDashboard />} />
               </Route>
             </Route>
 

@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type {
   Announcement,
   AttendanceRecord,
@@ -15,10 +15,36 @@ import { attendance as initialAttendance } from '../data/attendance';
 import { announcements as initialAnnouncements } from '../data/announcements';
 import { MOCK_TODAY, minutesBetween } from '../utils/date';
 import { makeId } from '../utils/id';
+import { bookService } from '../services/bookService';
+import { userService } from '../services/userService';
+import { borrowingService } from '../services/borrowingService';
+import { attendanceService } from '../services/attendanceService';
+import { announcementService } from '../services/announcementService';
+import { bookRequestService } from '../services/bookRequestService';
 
 export type NewBookInput = Omit<Book, 'id' | 'available' | 'status'>;
 export type NewAnnouncementInput = Pick<Announcement, 'title' | 'content'>;
-export type NewMemberInput = Pick<User, 'name' | 'email'>;
+export interface NewMemberInput {
+  name: string;
+  email: string;
+  password?: string;
+  username?: string;
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  contactNumber?: string;
+  address?: string;
+  studentId?: string;
+  school?: string;
+  course?: string;
+  yearLevel?: string;
+  schoolIdUrl?: string;
+  profilePhotoUrl?: string;
+  termsAgreed?: boolean;
+  infoAccurateConfirmed?: boolean;
+}
 
 interface RegisterResult {
   ok: boolean;
@@ -53,6 +79,7 @@ interface LibraryDataContextValue {
   registerMember: (input: NewMemberInput) => RegisterResult;
 
   // Requests
+  createBorrowRequest: (bookId: string, note: string, requesterId?: string) => void;
   approveRequest: (id: string, approverId: string) => void;
   rejectRequest: (id: string, approverId: string) => void;
   returnLoan: (requestId: string) => void;
@@ -60,6 +87,10 @@ interface LibraryDataContextValue {
   // Attendance
   checkIn: (memberId: string) => void;
   checkOut: (memberId: string) => void;
+
+  // Sync
+  refreshUsers: () => Promise<void>;
+  refreshBooks: () => Promise<void>;
 
   // Announcements
   addAnnouncement: (input: NewAnnouncementInput) => void;
@@ -81,37 +112,141 @@ export function LibraryDataProvider({ children }: { children: ReactNode }) {
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(initialAttendance);
   const [announcements, setAnnouncements] = useState<Announcement[]>(initialAnnouncements);
 
-  const addBook = (input: NewBookInput) => {
+  // Refresh functions for live backend API sync
+  const refreshUsers = async () => {
+    const token = localStorage.getItem('balingasag_session_token');
+    if (!token) return;
+    try {
+      const usersRes = await userService.getUsers({ status: 'all' });
+      if (usersRes.success && usersRes.data?.users?.length) {
+        setUsers(usersRes.data.users);
+      }
+    } catch (err) {}
+  };
+
+  const refreshBooks = async () => {
+    try {
+      const booksRes = await bookService.getBooks({ status: 'all' });
+      if (booksRes.success && booksRes.data?.books?.length) {
+        setBooks(booksRes.data.books);
+      }
+    } catch (err) {}
+  };
+
+  // Load initial public catalog on mount
+  useEffect(() => {
+    refreshBooks();
+    refreshUsers();
+  }, []);
+
+  const addBook = async (input: NewBookInput) => {
+    try {
+      const res = await bookService.createBook(input as any);
+      if (res.success && res.data?.book) {
+        setBooks((prev) => [res.data!.book, ...prev]);
+        return;
+      }
+    } catch (e) {}
+
     const book: Book = { ...input, id: makeId('bk'), available: input.quantity, status: 'active' };
     setBooks((prev) => [book, ...prev]);
   };
 
-  const updateBook = (id: string, patch: Partial<Book>) => {
+  const updateBook = async (id: string, patch: Partial<Book>) => {
+    try {
+      await bookService.updateBook(id, patch as any);
+    } catch (e) {}
     setBooks((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
   };
 
-  const setBookStatus = (id: string, status: Book['status']) => {
+  const setBookStatus = async (id: string, status: Book['status']) => {
+    try {
+      if (status === 'archived') {
+        await bookService.archiveBook(id);
+      } else if (status === 'active') {
+        await bookService.restoreBook(id);
+      } else {
+        await bookService.updateBook(id, { status } as any);
+      }
+    } catch (e) {}
     setBooks((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
   };
 
-  const setUserStatus = (id: string, status: UserStatus) => {
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status } : u)));
+  const setUserStatus = async (id: string, status: UserStatus) => {
+    try {
+      await userService.setUserStatus(id, status);
+    } catch (e) {}
+
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id !== id && u.user_id !== id) return u;
+        const uid = u.id || u.user_id || 'U';
+        const cardNumber = u.libraryCardNumber || `LIB-${uid.toUpperCase()}-2026`;
+        const qrCodeData = u.qrCodeData || cardNumber;
+        return {
+          ...u,
+          status,
+          ...(status === 'active'
+            ? {
+                libraryCardNumber: cardNumber,
+                qrCodeData,
+                approvedAt: MOCK_TODAY,
+              }
+            : {}),
+        };
+      }),
+    );
   };
 
-  // Public sign-up creates a "pending" member — a super admin/admin still has
-  // to approve it from User Management before the account can sign in (see
-  // AuthContext.login).
   const registerMember = (input: NewMemberInput): RegisterResult => {
     const name = input.name.trim();
     const email = input.email.trim();
     if (!name || !email) return { ok: false, error: 'Name and email are required.' };
+
+    // Fire asynchronous registration API call to PHP Backend
+    userService.register(input).then((res) => {
+      if (res.success && res.data?.user) {
+        setUsers((prev) => [res.data!.user, ...prev.filter((u) => u.email.toLowerCase() !== email.toLowerCase())]);
+      }
+    }).catch(() => {});
+
     if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
-      return { ok: false, error: 'An account with that email already exists.' };
+      return { ok: false, error: 'An account with that email address already exists.' };
     }
 
-    const user: User = { id: makeId('u'), name, email, role: 'member', status: 'pending', registeredAt: MOCK_TODAY };
+    const userId = makeId('u');
+    const user: User = {
+      ...input,
+      id: userId,
+      name,
+      email,
+      role: 'member',
+      status: 'pending',
+      registeredAt: MOCK_TODAY,
+    };
     setUsers((prev) => [user, ...prev]);
     return { ok: true };
+  };
+
+  const createBorrowRequest = (bookId: string, note: string, requesterId: string = 'u-3') => {
+    const newReq: BorrowRequest = {
+      id: makeId('req'),
+      type: 'borrowing',
+      requesterId,
+      bookId,
+      note,
+      date: MOCK_TODAY,
+      status: 'pending',
+    };
+    setRequests((prev) => [newReq, ...prev]);
+
+    // Backend sync
+    bookRequestService.create({
+      book_id: bookId,
+      title: note || 'Borrow Request',
+      reason: note,
+      request_type: 'borrowing',
+    }).catch(() => {});
   };
 
   const approveRequest = (id: string, approverId: string) => {
@@ -135,6 +270,7 @@ export function LibraryDataProvider({ children }: { children: ReactNode }) {
     if (target.type === 'borrowing' && target.bookId) {
       const bookId = target.bookId;
       setBooks((prev) => prev.map((b) => (b.id === bookId ? { ...b, available: Math.max(0, b.available - 1) } : b)));
+      borrowingService.borrowBook(bookId, target.requesterId).catch(() => {});
     }
     if (target.type === 'archive' && target.bookId) {
       setBookStatus(target.bookId, 'archived');
@@ -145,6 +281,7 @@ export function LibraryDataProvider({ children }: { children: ReactNode }) {
     setRequests((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: 'rejected', approverId, resolvedDate: MOCK_TODAY } : r)),
     );
+    bookRequestService.process(id, 'rejected').catch(() => {});
   };
 
   const returnLoan = (requestId: string) => {
@@ -157,6 +294,7 @@ export function LibraryDataProvider({ children }: { children: ReactNode }) {
         prev.map((b) => (b.id === bookId ? { ...b, available: Math.min(b.quantity, b.available + 1) } : b)),
       );
     }
+    borrowingService.returnBook(requestId).catch(() => {});
   };
 
   const checkIn = (memberId: string) => {
@@ -164,6 +302,7 @@ export function LibraryDataProvider({ children }: { children: ReactNode }) {
       { id: makeId('att'), memberId, date: MOCK_TODAY, timeIn: nowTime(), status: 'inside' },
       ...prev,
     ]);
+    attendanceService.checkIn(memberId).catch(() => {});
   };
 
   const checkOut = (memberId: string) => {
@@ -174,19 +313,23 @@ export function LibraryDataProvider({ children }: { children: ReactNode }) {
       next[openIndex] = { ...next[openIndex], timeOut: nowTime(), status: 'left' };
       return next;
     });
+    attendanceService.checkOut(memberId).catch(() => {});
   };
 
   const addAnnouncement = (input: NewAnnouncementInput) => {
     const announcement: Announcement = { ...input, id: makeId('ann'), status: 'draft', date: MOCK_TODAY };
     setAnnouncements((prev) => [announcement, ...prev]);
+    announcementService.create(input).catch(() => {});
   };
 
   const updateAnnouncement = (id: string, patch: Partial<Announcement>) => {
     setAnnouncements((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)));
+    announcementService.update(id, patch).catch(() => {});
   };
 
   const setAnnouncementStatus = (id: string, status: Announcement['status']) => {
     setAnnouncements((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
+    announcementService.update(id, { status }).catch(() => {});
   };
 
   const stats: DashboardStats = useMemo(() => {
@@ -234,11 +377,14 @@ export function LibraryDataProvider({ children }: { children: ReactNode }) {
     categoryBreakdown,
     avgVisitMinutes,
     currentlyInside,
+    refreshUsers,
+    refreshBooks,
     addBook,
     updateBook,
     setBookStatus,
     setUserStatus,
     registerMember,
+    createBorrowRequest,
     approveRequest,
     rejectRequest,
     returnLoan,

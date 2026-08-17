@@ -20,19 +20,33 @@ const longDateFormatter = new Intl.DateTimeFormat('en-US', {
 
 const monthFormatter = new Intl.DateTimeFormat('en-US', { month: 'short' });
 
+function parseDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+
+  const normalized = value.trim().replace(' ', 'T');
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(normalized)
+    ? new Date(`${normalized}T00:00:00`)
+    : new Date(normalized);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 /** "2025-08-08" -> "Aug 8, 2025" */
-export function formatDate(iso: string): string {
-  return dateFormatter.format(new Date(`${iso}T00:00:00`));
+export function formatDate(iso: string | null | undefined): string {
+  const date = parseDate(iso);
+  return date ? dateFormatter.format(date) : 'N/A';
 }
 
 /** "2025-08-11" -> "Monday, August 11, 2025" */
-export function formatLongDate(iso: string): string {
-  return longDateFormatter.format(new Date(`${iso}T00:00:00`));
+export function formatLongDate(iso: string | null | undefined): string {
+  const date = parseDate(iso);
+  return date ? longDateFormatter.format(date) : 'N/A';
 }
 
 /** "2025-08-08" -> "Aug" */
-export function formatMonth(iso: string): string {
-  return monthFormatter.format(new Date(`${iso}T00:00:00`));
+export function formatMonth(iso: string | null | undefined): string {
+  const date = parseDate(iso);
+  return date ? monthFormatter.format(date) : 'N/A';
 }
 
 /** Minutes between two "HH:mm" times. */

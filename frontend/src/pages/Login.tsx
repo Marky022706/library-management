@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowRight, Eye, EyeOff, TriangleAlert } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, LoaderCircle, TriangleAlert } from 'lucide-react';
 import { AuthShell } from '../components/layout/AuthShell';
 import { Field, inputClasses } from '../components/common/Field';
 import { Button } from '../components/common/Button';
@@ -18,16 +18,25 @@ export function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState('');
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const result = login(email, password);
-    if (!result.ok) {
-      setError(result.error ?? 'Unable to sign in.');
-      return;
-    }
+    if (isSigningIn) return;
+
     setError('');
-    navigate(`/${result.role}/dashboard`, { replace: true });
+    setIsSigningIn(true);
+    try {
+      const result = await login(email, password);
+      if (!result.ok) {
+        setError(result.error ?? 'Unable to sign in.');
+        return;
+      }
+      const rolePath = result.role === 'superadmin' ? 'super_admin' : result.role;
+      navigate(`/${rolePath}/dashboard`, { replace: true });
+    } finally {
+      setIsSigningIn(false);
+    }
   };
 
   return (
@@ -106,18 +115,20 @@ export function Login() {
           </button>
         </div>
 
-        <Button type="submit" className="w-full justify-center gap-2">
-          Sign In
-          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        <Button type="submit" disabled={isSigningIn} className="w-full justify-center gap-2">
+          {isSigningIn ? (
+            <>
+              <LoaderCircle className="loading-spinner h-4 w-4" aria-hidden="true" />
+              Signing in...
+            </>
+          ) : (
+            <>
+              Sign In
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </>
+          )}
         </Button>
       </form>
-
-      <div className="mt-6 rounded-lg bg-gray-50 px-3 py-3 text-xs text-muted">
-        <p className="font-medium text-ink">Demo credentials (any password):</p>
-        <p className="mt-1">Admin — admin@library.test</p>
-        <p>Super Admin — superadmin@library.test</p>
-        <p>Member — member@library.test</p>
-      </div>
     </AuthShell>
   );
 }

@@ -1,14 +1,13 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { BookOpen, ChevronRight, LogOut } from 'lucide-react';
 import type { NavItem } from './navConfig';
-import { UserProfile } from './UserProfile';
 import { useAuth } from '../../context/AuthContext';
 import { cn } from '../../utils/cn';
 
 interface SidebarProps {
   basePath: string;
-  roleLabel: string;
-  userName: string;
+  roleLabel?: string;
+  userName?: string;
   navItems: NavItem[];
   sectionLabel: string;
   isSuperAdmin?: boolean;
@@ -18,8 +17,6 @@ interface SidebarProps {
 
 export function Sidebar({
   basePath,
-  roleLabel,
-  userName,
   navItems,
   sectionLabel,
   isSuperAdmin = false,
@@ -41,12 +38,12 @@ export function Sidebar({
       )}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-[250px] flex-col bg-sidebar transition-transform duration-200 lg:sticky lg:top-0 lg:z-0 lg:h-screen lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 flex w-62.5 flex-col bg-sidebar transition-transform duration-200 lg:sticky lg:top-0 lg:z-0 lg:h-screen lg:translate-x-0',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
         aria-label="Sidebar navigation"
       >
-        <div className="flex items-center gap-3 px-5 pb-4 pt-6">
+        <div className="flex items-center gap-3 px-5 pb-6 pt-6">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white">
             <BookOpen className="h-5 w-5" aria-hidden="true" />
           </span>
@@ -54,10 +51,6 @@ export function Sidebar({
             <p className="truncate font-bold text-white">Balingasag</p>
             <p className="truncate text-xs text-primary-100">Public Library</p>
           </div>
-        </div>
-
-        <div className="mx-4 mb-5 rounded-xl bg-white/10 p-3">
-          <UserProfile name={userName} subtitle={roleLabel} dark />
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3">

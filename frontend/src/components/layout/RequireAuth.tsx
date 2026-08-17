@@ -14,7 +14,14 @@ export function RequireAuth({ role }: RequireAuthProps) {
   // redirect — otherwise a page reload always bounces to /login first.
   if (isInitializing) return null;
   if (!currentUser) return <Navigate to="/login" replace />;
-  if (currentUser.role !== role) return <Navigate to={`/${currentUser.role}/dashboard`} replace />;
+
+  const normalizedUserRole = currentUser.role.replace('_', '');
+  const normalizedTargetRole = role.replace('_', '');
+  const userRolePath = currentUser.role === 'superadmin' ? 'super_admin' : currentUser.role;
+
+  if (normalizedUserRole !== normalizedTargetRole) {
+    return <Navigate to={`/${userRolePath}/dashboard`} replace />;
+  }
 
   return <Outlet />;
 }

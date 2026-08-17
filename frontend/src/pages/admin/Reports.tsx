@@ -72,7 +72,7 @@ export function Reports() {
           <EmptyState icon={BarChart3} title="No borrowing activity yet" />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[480px] text-left text-sm">
+            <table className="w-full min-w-120 text-left text-sm">
               <thead>
                 <tr className="border-b border-line text-xs font-semibold uppercase tracking-wide text-muted">
                   <th className="py-3 pr-4">Book</th>
