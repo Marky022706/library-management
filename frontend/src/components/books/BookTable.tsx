@@ -1,10 +1,14 @@
 import { Archive, BookOpen, RotateCcw, SquarePen } from 'lucide-react';
+import { useRef, useEffect } from 'react';
 import type { Book } from '../../types';
 import { Badge, type BadgeTone } from '../common/Badge';
 import { EmptyState } from '../common/EmptyState';
 
 interface BookTableProps {
   books: Book[];
+  selectedBookIds?: Set<string>;
+  onSelectBook?: (bookId: string, selected: boolean) => void;
+  onSelectAll?: (selected: boolean) => void;
   onEdit: (book: Book) => void;
   onToggleStatus: (book: Book) => void;
 }
@@ -16,7 +20,26 @@ const CONDITION_TONE: Record<Book['condition'], BadgeTone> = {
   Worn: 'red',
 };
 
-export function BookTable({ books, onEdit, onToggleStatus }: BookTableProps) {
+export function BookTable({ books, selectedBookIds = new Set(), onSelectBook, onSelectAll, onEdit, onToggleStatus }: BookTableProps) {
+  const allSelected = books.length > 0 && selectedBookIds.size === books.length;
+  const someSelected = selectedBookIds.size > 0 && selectedBookIds.size < books.length;
+  const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
+
+  // Update indeterminate state for the Select All checkbox
+  useEffect(() => {
+    if (selectAllCheckboxRef.current) {
+      selectAllCheckboxRef.current.indeterminate = someSelected;
+    }
+  }, [someSelected]);
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onSelectAll?.(e.target.checked);
+  };
+
+  const handleSelectBook = (bookId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    onSelectBook?.(bookId, e.target.checked);
+  };
+
   if (books.length === 0) {
     return <EmptyState icon={BookOpen} title="No books found" description="Try adjusting your search or filters." />;
   }
@@ -26,10 +49,20 @@ export function BookTable({ books, onEdit, onToggleStatus }: BookTableProps) {
       <table className="w-full min-w-[860px] text-left text-sm">
         <thead>
           <tr className="border-b border-line text-xs font-semibold uppercase tracking-wide text-muted">
+            <th className="py-3 pl-4 pr-3 w-12">
+              <input
+                ref={selectAllCheckboxRef}
+                type="checkbox"
+                checked={allSelected}
+                onChange={handleSelectAll}
+                aria-label="Select all books"
+                className="h-4 w-4 cursor-pointer rounded border-line accent-ink"
+              />
+            </th>
             <th className="py-3 pr-4">Book</th>
             <th className="py-3 pr-4">Author</th>
-            <th className="py-3 pr-4">Category</th>
-            <th className="py-3 pr-4">ISBN</th>
+            <th className="py-3 pr-4">Accession Number</th>
+            <th className="py-3 pr-4">Pages</th>
             <th className="py-3 pr-4">Qty</th>
             <th className="py-3 pr-4">Available</th>
             <th className="py-3 pr-4">Condition</th>
@@ -39,7 +72,21 @@ export function BookTable({ books, onEdit, onToggleStatus }: BookTableProps) {
         </thead>
         <tbody>
           {books.map((book) => (
-            <tr key={book.id} className="border-b border-line last:border-0 hover:bg-gray-50/60">
+            <tr
+              key={book.id}
+              className={`border-b border-line last:border-0 hover:bg-gray-50/60 ${
+                selectedBookIds.has(book.id) ? 'bg-blue-50' : ''
+              }`}
+            >
+              <td className="py-3 pl-4 pr-3">
+                <input
+                  type="checkbox"
+                  checked={selectedBookIds.has(book.id)}
+                  onChange={(e) => handleSelectBook(book.id, e)}
+                  aria-label={`Select ${book.title}`}
+                  className="h-4 w-4 cursor-pointer rounded border-line accent-ink"
+                />
+              </td>
               <td className="py-3 pr-4">
                 <div className="flex items-center gap-3">
                   <span
@@ -53,8 +100,8 @@ export function BookTable({ books, onEdit, onToggleStatus }: BookTableProps) {
                 </div>
               </td>
               <td className="py-3 pr-4 text-muted">{book.author}</td>
-              <td className="py-3 pr-4 text-muted">{book.category}</td>
-              <td className="py-3 pr-4 text-muted">{book.isbn}</td>
+              <td className="py-3 pr-4 text-muted">{book.accessionNumber || '—'}</td>
+              <td className="py-3 pr-4 text-muted">{book.pages || '—'}</td>
               <td className="py-3 pr-4 text-ink">{book.quantity}</td>
               <td className="py-3 pr-4">
                 <Badge tone={book.available === 0 ? 'red' : 'green'}>{book.available}</Badge>

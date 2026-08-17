@@ -55,8 +55,14 @@ export interface Book {
   id: string;
   title: string;
   author: string;
-  category: string;
-  isbn: string;
+  category?: string;
+  publisher?: string;
+  publicationYear?: number;
+  accessionNumber?: string;
+  isbn?: string;
+  pages?: number;
+  shelfLocation?: string;
+  format?: string;
   quantity: number;
   available: number;
   condition: BookCondition;

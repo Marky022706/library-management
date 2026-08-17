@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentProps } from 'react';
+import { useEffect, useMemo, useState, type ComponentProps } from 'react';
 import { Plus } from 'lucide-react';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
@@ -18,14 +18,24 @@ const STATUS_OPTIONS = [
 ];
 
 export function BookManagement() {
-  const { books, addBook, updateBook, setBookStatus } = useLibraryData();
+  const { books, addBook, updateBook, setBookStatus, refreshBooks } = useLibraryData();
   const { showToast } = useToast();
+
+  useEffect(() => {
+    refreshBooks();
+  }, []);
+
+  // Clear selection when search or filter changes
+  useEffect(() => {
+    setSelectedBookIds(new Set());
+  }, [search, statusFilter]);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
   const [formOpen, setFormOpen] = useState(false);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [pendingToggle, setPendingToggle] = useState<Book | null>(null);
+  const [selectedBookIds, setSelectedBookIds] = useState<Set<string>>(new Set());
 
   const filteredBooks = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -69,6 +79,26 @@ export function BookManagement() {
     setPendingToggle(null);
   };
 
+  const handleSelectBook = (bookId: string, selected: boolean) => {
+    setSelectedBookIds((prev) => {
+      const next = new Set(prev);
+      if (selected) {
+        next.add(bookId);
+      } else {
+        next.delete(bookId);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      setSelectedBookIds(new Set(filteredBooks.map((b) => b.id)));
+    } else {
+      setSelectedBookIds(new Set());
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -86,7 +116,7 @@ export function BookManagement() {
           <Dropdown value={statusFilter} onChange={setStatusFilter} options={STATUS_OPTIONS} label="Filter by status" />
         </div>
 
-        <BookTable books={filteredBooks} onEdit={openEditModal} onToggleStatus={setPendingToggle} />
+        <BookTable\n          books={filteredBooks}\n          selectedBookIds={selectedBookIds}\n          onSelectBook={handleSelectBook}\n          onSelectAll={handleSelectAll}\n          onEdit={openEditModal}\n          onToggleStatus={setPendingToggle}\n        />
       </Card>
 
       <BookFormModal open={formOpen} book={editingBook} onClose={() => setFormOpen(false)} onSubmit={handleSubmit} />

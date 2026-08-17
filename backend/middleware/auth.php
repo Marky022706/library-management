@@ -6,6 +6,41 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+function parseRequestInputFromString(?string $rawBody, array $fallback = []): array {
+    if (is_string($rawBody) && trim($rawBody) !== '') {
+        $decoded = json_decode($rawBody, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            return $decoded;
+        }
+
+        parse_str($rawBody, $parsedForm);
+        if (!empty($parsedForm)) {
+            return $parsedForm;
+        }
+    }
+
+    return is_array($fallback) ? $fallback : [];
+}
+
+function parseRequestInput(array $fallback = []): array {
+    $rawBody = file_get_contents('php://input');
+    if ($rawBody === false || trim((string)$rawBody) === '') {
+        return is_array($fallback) ? $fallback : [];
+    }
+
+    $decoded = json_decode($rawBody, true);
+    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+        return $decoded;
+    }
+
+    parse_str($rawBody, $parsedForm);
+    if (!empty($parsedForm)) {
+        return $parsedForm;
+    }
+
+    return is_array($fallback) ? $fallback : [];
+}
+
 function getAuthenticatedUser(bool $required = true): ?array {
     $pdo = Database::getConnection();
     $userId = null;

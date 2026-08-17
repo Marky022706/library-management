@@ -8,7 +8,7 @@ require_once __DIR__ . '/../models/ActivityLog.php';
 require_once __DIR__ . '/../models/AuditLog.php';
 
 $action = $_GET['action'] ?? '';
-$input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+$input = parseRequestInput($_POST);
 if (!empty($input['action'])) {
     $action = $input['action'];
 }

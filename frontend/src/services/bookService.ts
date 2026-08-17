@@ -4,12 +4,16 @@ import type { Book } from '../types';
 export interface BookInput {
   title: string;
   author: string;
-  category: string;
+  category?: string;
   publisher?: string;
   publication_year?: number;
+  publicationYear?: number;
   isbn?: string;
   accession_number?: string;
+  accessionNumber?: string;
+  pages?: number;
   shelf_location?: string;
+  shelfLocation?: string;
   format?: string;
   quantity?: number;
   available?: number;

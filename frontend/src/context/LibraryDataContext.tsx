@@ -143,7 +143,8 @@ export function LibraryDataProvider({ children }: { children: ReactNode }) {
     try {
       const res = await bookService.createBook(input as any);
       if (res.success && res.data?.book) {
-        setBooks((prev) => [res.data!.book, ...prev]);
+        const newBook = res.data.book;
+        setBooks((prev) => [newBook, ...prev.filter((b) => b.id !== newBook.id && b.isbn !== newBook.isbn)]);
         return;
       }
     } catch (e) {}

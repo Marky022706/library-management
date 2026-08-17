@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS books (
   publication_year INT,
   accession_number VARCHAR(100) UNIQUE,
   isbn VARCHAR(50),
+  pages INT,
   shelf_location VARCHAR(100),
   format VARCHAR(50),
   quantity INT DEFAULT 1,
